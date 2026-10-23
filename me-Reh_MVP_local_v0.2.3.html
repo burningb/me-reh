@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>미래 | me-Reh — Voice Responsive Captions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+KR:wght@400;600;800&display=swap">
+<style>
+:root{
+ --bg0:#0b0d12;--panel:rgba(255,255,255,.035);--panel-b:rgba(255,255,255,.09);--mint:#8cdbb8;--mint2:#7ad9ff;--pink:#f5bac0;--pink2:#ff9ec4;
+ --grad-ocean:linear-gradient(160deg,#aee4ff 0%,#4fa3ff 45%,#0c3f82 100%);
+ --grad-tiger:repeating-linear-gradient(112deg,#ffb238 0 16px,#1c1206 16px 24px,#ff7a1a 24px 40px,#140d05 40px 48px);
+ --grad-fire:linear-gradient(140deg,#fff5b0 0%,#ffb23c 28%,#ff4d1c 58%,#8f0d0d 100%);
+ --grad-neon:linear-gradient(120deg,#5ef5ff 0%,#9b6bff 50%,#ff5ec4 100%);
+ --grad-metal:repeating-linear-gradient(100deg,#f3f6fa 0 6px,#aab3c0 6px 11px,#f8fafc 11px 17px,#7c8694 17px 23px);
+ --grad-holo:conic-gradient(from 200deg at 50% 50%,#ff6ec7,#7afcff,#fff58a,#b48bff,#7affa0,#ff6ec7);
+ --grad-marble:radial-gradient(circle at 24% 28%,rgba(255,255,255,.55),transparent 42%),radial-gradient(circle at 72% 64%,rgba(255,255,255,.32),transparent 38%),linear-gradient(160deg,#dfe6ee 0%,#9aa7b8 55%,#4b5768 100%);
+ --grad-galaxy:radial-gradient(circle at 24% 22%,#fff 0 2px,transparent 3px) 0 0/22px 22px,radial-gradient(circle at 68% 58%,#fff 0 1.4px,transparent 2.4px) 0 0/16px 16px,radial-gradient(circle at 40% 82%,#fff 0 1.2px,transparent 2.2px) 0 0/26px 26px,linear-gradient(135deg,#d9c9ff 0%,#a78bfa 22%,#8b5cf6 42%,#6d28d9 64%,#4c1d95 84%,#2e1065 100%);
+ font-family:'Inter','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#f3f3f6;background:var(--bg0)
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#0b0d12;overflow-x:hidden;position:relative}
+body::before{content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;
+ background:radial-gradient(circle at 18% 22%,rgba(93,122,255,.24),transparent 40%),
+            radial-gradient(circle at 82% 28%,rgba(255,110,199,.16),transparent 42%),
+            radial-gradient(circle at 50% 85%,rgba(122,252,255,.14),transparent 46%),
+            radial-gradient(ellipse at 50% 30%,#1c2233 0%,#0b0d12 65%);
+ filter:blur(60px);animation:aurora 24s ease-in-out infinite alternate}
+@keyframes aurora{0%{transform:translate(0,0) scale(1)}50%{transform:translate(-3%,2%) scale(1.08)}100%{transform:translate(2%,-3%) scale(1.02)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+button,select,input{font:inherit}button{cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #a1efcd;outline-offset:3px}
+.app{width:min(1220px,94vw);margin:auto;min-height:100vh;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;justify-content:space-between;padding:31px 0;gap:15px;animation:fadeUp .6s ease both}
+.brand{display:flex;align-items:baseline;gap:14px}
+.brand b{font-size:30px;letter-spacing:-1px;font-weight:800;background:linear-gradient(135deg,var(--mint),var(--mint2));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.brand span{color:#a6e9ce;font-size:14px}
+.tag{font-size:11px;letter-spacing:1.5px;color:#a7aab6;text-transform:uppercase}
+.status{display:flex;gap:8px;align-items:center;font-size:13px;color:#bec2cc}
+.dot{height:9px;width:9px;border-radius:50%;background:#7c8796}
+.dot.on{background:#7aefb9;box-shadow:0 0 15px #7aefb9}
+.stage{flex:1;min-height:365px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 18px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.09);background:rgba(12,15,24,.5);backdrop-filter:blur(18px);border-radius:26px;box-shadow:0 20px 60px rgba(0,0,0,.35);animation:fadeUp .6s ease both}
+.stage:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 60%,rgba(93,122,165,.1),transparent 55%)}
+.eyebrow{color:#8e99aa;letter-spacing:3px;font-size:11px;margin-bottom:26px}
+.caption{max-width:100%;font-weight:580;line-height:1.42;letter-spacing:-.035em;overflow-wrap:anywhere;transition:font-size .10s ease,font-weight .12s ease,transform .10s ease,opacity .22s ease;white-space:pre-wrap;z-index:1;text-wrap:balance}
+.caption.switch-fade{opacity:.12}
+.caption.empty{color:#737d90;font-weight:440}
+.history{height:50px;max-width:850px;color:#858f9e;overflow:hidden;line-height:1.4;margin-top:28px}
+.hint{font-size:12px;color:#737d90;margin-top:24px}
+.bottom{padding:24px 0 35px}
+.controls{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;animation:fadeUp .6s ease .05s both}
+.primary,.secondary{border-radius:50px;padding:13px 22px;color:#f5f6f9;transition:transform .18s ease,background .2s ease,box-shadow .2s ease,border-color .2s ease}
+.secondary{border:1px solid var(--panel-b);background:var(--panel);backdrop-filter:blur(10px)}
+.secondary:hover{background:rgba(255,255,255,.09);transform:translateY(-2px);box-shadow:0 10px 22px rgba(0,0,0,.28)}
+.secondary:active{transform:translateY(0) scale(.97)}
+.primary{background:linear-gradient(135deg,var(--mint),var(--mint2));color:#06251e;border:1px solid transparent;font-weight:750}
+.primary:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(122,217,255,.28)}
+.primary:active{transform:translateY(0) scale(.97)}
+.primary.active{background:linear-gradient(135deg,var(--pink),var(--pink2));color:#39161e}
+.primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.settings{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;align-items:center;margin-top:20px;color:#c3c7d3;font-size:12px;animation:fadeUp .6s ease .2s both}
+.settings label{display:flex;gap:8px;align-items:center}
+.settings select{accent-color:var(--mint);background:#181e29;color:#f0f0f0;border:1px solid #3b4554;border-radius:9px;padding:7px 10px}
+.meters{display:flex;align-items:center;justify-content:center;gap:27px;margin-top:22px;animation:fadeUp .6s ease .3s both}
+.meter{display:flex;align-items:center;gap:10px;font-size:11px;color:#8894a6}
+.track{height:6px;width:96px;border-radius:5px;background:#252d3b;overflow:hidden}
+.fill{background:linear-gradient(90deg,var(--mint),var(--mint2));height:100%;width:0%;transition:width .1s}
+.fill.pitch{background:linear-gradient(90deg,#b1b8f2,#d19bff)}
+.foot{font-size:11px;color:#7c8594;text-align:center;line-height:1.7;margin-top:20px}
+.error{font-size:13px;text-align:center;color:#ffc1bd;min-height:19px;margin-top:11px}
+.contrast .caption{color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:none!important;transform:none!important;background:none!important}
+.contrast .stage{background:#000}
+.contrast .caption.empty{color:#fff}
+
+/* ---- toggle switches ---- */
+.settings input[type=checkbox]{appearance:none;-webkit-appearance:none;width:40px;height:23px;border-radius:999px;background:#2a3140;border:1px solid #3b4554;position:relative;transition:background .25s,border-color .25s;flex:0 0 auto}
+.settings input[type=checkbox]::before{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#aab3c0;transition:transform .25s ease,background .25s ease;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.settings input[type=checkbox]:checked{background:linear-gradient(135deg,var(--mint),var(--mint2));border-color:transparent}
+.settings input[type=checkbox]:checked::before{transform:translateX(17px);background:#06251e}
+
+/* ---- speaker segmented control ---- */
+.speaker-row{position:relative;display:inline-flex;gap:0;padding:4px;border-radius:18px;background:var(--panel);border:1px solid var(--panel-b);backdrop-filter:blur(10px);margin:18px auto 0;animation:fadeUp .6s ease .1s both}
+.speaker-row-wrap{display:flex;justify-content:center}
+.speaker-thumb{position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);border-radius:14px;background:linear-gradient(135deg,var(--mint),var(--mint2));transition:transform .34s cubic-bezier(.4,0,.2,1),background .3s;z-index:0}
+.speaker-row.pos-b .speaker-thumb{transform:translateX(100%)}
+.speaker-btn{position:relative;z-index:1;border:none;background:transparent;border-radius:14px;padding:10px 20px;color:#dfe3ea;font-size:13px;font-weight:650;display:flex;align-items:center;gap:8px;transition:color .25s}
+.speaker-btn .dot2{width:9px;height:9px;border-radius:50%;background:#888;transition:background .25s}
+.speaker-btn.active{color:#06251e}
+
+/* ---- glass panels ---- */
+.persona-panel,.font-panel{margin:16px auto 0;max-width:1050px;display:flex;gap:11px;align-items:center;justify-content:center;flex-wrap:wrap;padding:16px 18px;color:#c3c7d3;font-size:12px;background:var(--panel);border:1px solid var(--panel-b);backdrop-filter:blur(14px);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.22)}
+.persona-panel{animation:fadeUp .6s ease .15s both}
+.font-panel{animation:fadeUp .6s ease .25s both}
+.persona-panel label,.font-panel label{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.persona-panel input,.persona-panel select,.font-panel input,.font-panel select{background:#181e29;color:#f5f5f5;border:1px solid #485367;border-radius:9px;padding:8px 10px;min-width:95px;transition:border-color .2s,box-shadow .2s}
+.persona-panel input:focus,.persona-panel select:focus,.font-panel input:focus,.font-panel select:focus{border-color:var(--mint2);box-shadow:0 0 0 3px rgba(122,217,255,.18)}
+.persona-panel input[type=color]{min-width:40px;width:44px;padding:2px;height:34px}
+.font-panel input[type=file]{max-width:190px;font-size:11px}
+.persona-panel button,.font-panel button{border:1px solid #475466;color:#e5f9f1;border-radius:9px;background:#253342;padding:8px 12px;transition:transform .18s ease,background .2s ease}
+.persona-panel button:hover,.font-panel button:hover{background:#2c3d4f;transform:translateY(-1px)}
+.persona-title{width:100%;text-align:center;color:#8ea0b8;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.font-info{width:100%;text-align:center;color:#929daf;line-height:1.5}
+
+/* ---- texture swatch ---- */
+.tex-swatch{width:24px;height:24px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(255,255,255,.3);box-shadow:0 1px 5px rgba(0,0,0,.45)}
+.tex-swatch.texture-ocean{background-image:var(--grad-ocean)}
+.tex-swatch.texture-tiger{background-image:var(--grad-tiger)}
+.tex-swatch.texture-fire{background-image:var(--grad-fire)}
+.tex-swatch.texture-neon{background-image:var(--grad-neon)}
+.tex-swatch.texture-metal{background-image:var(--grad-metal)}
+.tex-swatch.texture-holo{background-image:var(--grad-holo)}
+.tex-swatch.texture-marble{background-image:var(--grad-marble)}
+.tex-swatch.texture-galaxy{background:var(--grad-galaxy)}
+
+/* ---- caption textures ---- */
+.caption.texture-ocean{background-image:var(--grad-ocean);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.caption.texture-tiger{background-image:var(--grad-tiger);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.caption.texture-fire{background-image:var(--grad-fire);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.caption.texture-neon{background-image:var(--grad-neon);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 6px rgba(130,235,255,.5)) drop-shadow(0 0 16px rgba(170,120,255,.4))}
+.caption.texture-metal{background-image:var(--grad-metal);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.caption.texture-holo{background-image:var(--grad-holo);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.caption.texture-marble{background-image:var(--grad-marble);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.caption.texture-galaxy{background:var(--grad-galaxy);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.contrast .caption{-webkit-text-fill-color:#fff!important;filter:none!important}
+
+/* ---- range sliders ---- */
+.persona-panel input[type=range]{-webkit-appearance:none;appearance:none;height:6px;min-width:130px;border-radius:999px;background:linear-gradient(90deg,var(--mint) var(--val,50%),#232a38 var(--val,50%));padding:0;border:none}
+.persona-panel input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--mint2);box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:pointer}
+.persona-panel input[type=range]::-moz-range-track{height:6px;border-radius:999px;background:#232a38}
+.persona-panel input[type=range]::-moz-range-progress{height:6px;border-radius:999px;background:var(--mint)}
+.persona-panel input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--mint2);cursor:pointer}
+
+@media(max-width:680px){.top{padding:24px 0;align-items:flex-start}.brand{display:block}.brand b{font-size:28px}.brand span{display:block;margin-top:5px}.stage{min-height:390px}.settings{gap:10px}.eyebrow{font-size:10px;letter-spacing:1px}.persona-panel,.font-panel{padding:14px}}
+
+.local-panel{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:14px auto 0;padding:12px;border:1px solid #475466;border-radius:14px;max-width:900px}.local-panel button,.local-panel label{font-size:12px;background:#253342;color:white;padding:10px 12px;border:1px solid #596477;border-radius:9px;cursor:pointer}.local-panel label input{display:none}.local-panel .hint-local{width:100%;text-align:center;color:#a5b4c3;font-size:12px;line-height:1.5}.local-panel input[type=checkbox]{accent-color:#8cdbb8}.reduce-motion *, .reduce-motion *::before,.reduce-motion *::after{animation:none!important;transition:none!important}.reduce-motion body::before{animation:none!important}.app.reduce-motion ~ *{animation:none!important}@media(prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+<header class="top"><div><div class="brand"><b>me-Reh</b><span>미래</span></div><div class="tag" style="margin-top:10px">VOICE-RESPONSIVE ACCESSIBLE CAPTIONS · MVP 0.2.3 · RESEARCH BUILD</div></div><div class="status" role="status"><span class="dot" id="dot"></span><span id="status">대기 중</span></div></header>
+<main class="stage" aria-label="실시간 자막 표시 화면"><div class="eyebrow" id="speaker">SPEAKER 01 · LIVE CAPTION</div><div class="caption empty" id="caption" role="status" aria-live="polite" aria-atomic="true">마이크를 켜고 말씀해 주세요.</div><div class="history" id="history" aria-label="직전 인식 결과"></div><div class="hint">음량 → 글자 크기·굵기　 |　 음높이 → 미세한 수직 반응</div></main>
+<section class="bottom"><div class="controls"><button class="primary" id="toggle">● 마이크 시작</button><button class="secondary" id="clear">자막 지우기</button><button class="secondary" id="sample">예시 보기</button><button class="secondary" id="full">전체 화면</button></div>
+<div class="error" id="error" role="alert"></div>
+<div class="speaker-row-wrap"><div class="speaker-row" role="group" aria-label="발화자 전환" id="speakerRow">
+<div class="speaker-thumb" id="speakerThumb"></div>
+<button class="speaker-btn active" id="spbtnA" type="button" data-speaker="A"><span class="dot2" id="spdotA"></span><span id="spnameA">화자 A</span></button>
+<button class="speaker-btn" id="spbtnB" type="button" data-speaker="B"><span class="dot2" id="spdotB"></span><span id="spnameB">화자 B</span></button>
+</div></div>
+<div class="persona-panel" aria-label="발화자별 자막 스타일 설정">
+<div class="persona-title" id="personaTitle">화자 A 스타일 편집</div>
+<label>이름 <input id="spName" type="text" maxlength="12" aria-label="화자 이름"></label>
+<label>색상/텍스처 <select id="spTexture">
+<option value="solid">단색</option>
+<option value="ocean">바다</option>
+<option value="tiger">호랑이무늬</option>
+<option value="fire">불꽃</option>
+<option value="neon">네온</option>
+<option value="metal">금속</option>
+<option value="holo">홀로그램</option>
+<option value="marble">대리석</option>
+<option value="galaxy">은하수</option>
+</select><span class="tex-swatch" id="texSwatch"></span></label>
+<label>단색 색상 <input id="spColor" type="color" aria-label="단색 색상"></label>
+<label>크기 <input id="spSize" type="range" min="1" max="12" value="6"><span id="spSizeVal">6/12</span></label>
+<label>굵기 <select id="spWeight"><option value="400">보통</option><option value="500">약간 굵게</option><option value="700">굵게</option><option value="800">매우 굵게</option></select></label>
+<label>반응 강도 <input id="spReactivity" type="range" min="0.3" max="2" step="0.1" value="1"><span id="spReactivityVal">1.0×</span></label>
+</div>
+<div class="settings"><label>언어 <select id="language"><option value="ko-KR">한국어</option><option value="en-US">English</option><option value="ja-JP">日本語</option></select></label><label><input type="checkbox" id="motion" checked> 음향 반응</label><label><input type="checkbox" id="contrast"> 고대비·고정 자막</label></div>
+<div class="font-panel" aria-label="자막 글꼴 설정">
+<label>추천 무료 글꼴(선택된 화자) <select id="fontpreset"><option value="">기본 시스템 글꼴</option><optgroup label="한국어 / Korean">
+<option>Noto Sans KR</option><option>Noto Serif KR</option><option>Gothic A1</option><option>Nanum Gothic</option><option>Nanum Myeongjo</option><option>Nanum Pen Script</option><option>Nanum Brush Script</option><option>Black Han Sans</option><option>Do Hyeon</option><option>Jua</option><option>Gaegu</option><option>Gamja Flower</option><option>Hi Melody</option><option>Sunflower</option><option>Song Myung</option><option>Stylish</option><option>East Sea Dokdo</option><option>Single Day</option></optgroup><optgroup label="영어 / Latin">
+<option>Inter</option><option>Roboto</option><option>Open Sans</option><option>Lato</option><option>Montserrat</option><option>Poppins</option><option>Oswald</option><option>Raleway</option><option>Nunito</option><option>Playfair Display</option><option>DM Sans</option><option>Space Grotesk</option><option>IBM Plex Sans</option><option>Inconsolata</option><option>Rubik</option><option>Work Sans</option><option>Manrope</option><option>Merriweather</option><option>Anton</option></optgroup><optgroup label="일본어 / Japanese">
+<option>Noto Sans JP</option><option>Noto Serif JP</option><option>M PLUS 1p</option><option>M PLUS Rounded 1c</option><option>Sawarabi Gothic</option><option>Sawarabi Mincho</option><option>Kosugi</option><option>Kosugi Maru</option><option>Shippori Mincho</option><option>Zen Kaku Gothic New</option><option>Zen Maru Gothic</option><option>Zen Old Mincho</option><option>Yusei Magic</option><option>Kaisei Decol</option><option>Hachi Maru Pop</option></optgroup></select></label>
+<label>Google Fonts 이름 <input id="fontname" placeholder="글꼴 이름 입력" aria-label="Google Fonts 글꼴 이름"></label><button id="fontapply" type="button">웹폰트 적용</button>
+<label>로컬 무료 폰트 <input type="file" id="fontfile" accept=".woff,.woff2,.ttf,.otf,font/woff,font/woff2,font/ttf,font/otf"></label><button id="fontreset" type="button">글꼴 초기화</button>
+<div class="font-info" id="fontinfo" role="status">추천 목록에 없는 무료 Google Fonts도 정확한 글꼴 이름을 입력하여 불러올 수 있습니다. 파일 글꼴은 권한·라이선스를 확인한 후 선택해 주세요.</div></div>
+<div class="local-panel" aria-label="로컬 저장 및 내보내기">
+<button type="button" id="saveSettings">설정 로컬 저장</button><button type="button" id="exportSettings">설정 JSON 내보내기</button><label>설정 JSON 가져오기<input type="file" id="importSettings" accept=".json,application/json"></label>
+<button type="button" id="exportTranscript">자막 기록 TXT 저장</button><button type="button" id="clearSaved">로컬 데이터 삭제</button><label><input type="checkbox" id="autoSaveTranscript"> 자막 기록 로컬 자동 저장 (선택)</label><label><input type="checkbox" id="reduceMotion"> 모든 움직임 줄이기</label>
+<div class="hint-local" id="localMsg" role="status">설정과 기록은 이 브라우저 내부에만 보관됩니다. 자막 기록 자동 저장은 기본 꺼짐이며, HTML 자체에 음성 인식 모델은 포함되지 않습니다.</div></div><div class="meters"><div class="meter">VOLUME <div class="track"><div class="fill" id="volume"></div></div></div><div class="meter">PITCH <div class="track"><div class="fill pitch" id="pitch"></div></div><span id="pitchval" style="font-size:11px;color:#8c95a2">— Hz</span></div></div>
+<div class="foot">브라우저의 마이크 접근 권한이 필요합니다. Web Speech API는 브라우저의 원격 음성 인식 서비스에 연결될 수 있어 인터넷이 필요할 수 있습니다.<br>실험용 프로토타입 · 정확한 기록 또는 전문 자막 서비스를 대체하지 않습니다. · 화자 전환은 수동이며, 한 번에 한 사람의 발화만 인식합니다.</div></section></div>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id), caption=$('caption'), historyEl=$('history'), error=$('error');
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const SIZE_MIN=28, SIZE_MAX=90;
+const TEXTURES=['ocean','tiger','fire','neon','metal','holo','marble','galaxy'];
+const sizeToPx=v=>Math.round(SIZE_MIN+(v-1)/11*(SIZE_MAX-SIZE_MIN));
+const setFill=(el,min,max)=>{const pct=(Number(el.value)-min)/(max-min)*100;el.style.setProperty('--val',`${clampPct(pct)}%`);};
+const clampPct=p=>Math.max(0,Math.min(100,p));
+let currentSpeaker='A';
+const speakers={
+A:{name:'화자 A',texture:'ocean',color:'#4fa3ff',size:9,weight:400,reactivity:0.6,fontFamily:'Gothic A1',fontCSS:'',fontLink:null,customFontFace:null,fontObjectUrl:null},
+B:{name:'화자 B',texture:'tiger',color:'#ff7a1a',size:12,weight:800,reactivity:1.6,fontFamily:'Noto Serif KR',fontCSS:'',fontLink:null,customFontFace:null,fontObjectUrl:null}
+};
+let historyEntries=[];
+let recognition=null, stream=null, ctx=null, analyser=null, raf=0, active=false, restarting=false, finalText='', interimText='', lastPitch=0, smoothVolume=0;
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+function setStatus(t,on=false){$('status').textContent=t;$('dot').classList.toggle('on',on)}
+function showError(s){error.textContent=s||''}
+function captionText(){const shown=(interimText||finalText).trim();caption.textContent=shown||'마이크를 켜고 말씀해 주세요.';caption.classList.toggle('empty',!shown);}
+function applyStyle(volume=0,pitch=0){
+const sp=speakers[currentSpeaker];
+const basePx=sizeToPx(sp.size);
+let scale=1,y=0,weight=sp.weight;
+if($('motion').checked&&!$('contrast').checked){
+const amp=sp.reactivity;
+scale=1+clamp(volume*2.15*amp,0,.9);
+weight=clamp(Math.round((sp.weight+clamp(volume*1050*amp,0,380))/10)*10,300,900);
+if(pitch)y=-clamp((pitch-160)/28*amp,-12,16);
+}
+caption.style.fontSize=`${Math.round(basePx*scale)}px`;
+caption.style.fontWeight=String(weight);
+caption.style.transform=`translateY(${y}px)`;
+}
+function updateSwatch(){
+const sp=speakers[currentSpeaker];
+const el=$('texSwatch');
+if(sp.texture==='solid'){el.className='tex-swatch';el.style.background=sp.color;}
+else{el.style.background='';el.className=`tex-swatch texture-${sp.texture}`;}
+}
+function applyPersonaVisual(){
+const sp=speakers[currentSpeaker];
+caption.classList.add('switch-fade');
+TEXTURES.forEach(t=>caption.classList.remove(`texture-${t}`));
+if(sp.texture!=='solid')caption.classList.add(`texture-${sp.texture}`);
+caption.style.color=sp.texture==='solid'?sp.color:'';
+caption.style.fontFamily=sp.fontCSS||'';
+$('speaker').textContent=`${sp.name} · LIVE CAPTION`;
+updateSwatch();
+requestAnimationFrame(()=>requestAnimationFrame(()=>caption.classList.remove('switch-fade')));
+applyStyle(smoothVolume,lastPitch);
+}
+function renderHistory(){
+historyEl.replaceChildren();
+const shown=historyEntries.slice(-5);
+shown.forEach((h,i)=>{
+if(i>0)historyEl.appendChild(document.createTextNode(' · '));
+const tag=document.createElement('span');
+tag.style.color=h.color;tag.style.fontWeight='700';
+tag.textContent=`[${h.name}] `;
+historyEl.appendChild(tag);
+historyEl.appendChild(document.createTextNode(h.text));
+});
+}
+function estimatePitch(data,sr){ // 단순 자기상관: 발화 중 기본 주파수의 근사값이며, 배경 소음에 취약합니다.
+const n=data.length;let energy=0;for(let i=0;i<n;i++)energy+=data[i]*data[i];if(Math.sqrt(energy/n)<.022)return 0;
+const min=Math.floor(sr/600),max=Math.min(Math.floor(sr/75),Math.floor(n/2));let best=0,lag=0;
+for(let l=min;l<=max;l++){let sum=0,a=0,b=0;for(let i=0;i<n-l;i+=2){const x=data[i],y=data[i+l];sum+=x*y;a+=x*x;b+=y*y;}const score=sum/Math.sqrt(a*b+1e-12);if(score>best){best=score;lag=l;}}
+return best>.72&&lag?sr/lag:0;
+}
+function monitor(){if(!active||!analyser)return;const data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);let sum=0;for(const v of data)sum+=v*v;const rms=Math.sqrt(sum/data.length);smoothVolume=smoothVolume*.78+rms*.22;const p=estimatePitch(data,ctx.sampleRate);if(p)lastPitch=lastPitch?lastPitch*.65+p*.35:p;const live=p?lastPitch:0;const signal=clamp(smoothVolume*5,0,1);$('volume').style.width=`${signal*100}%`;$('pitch').style.width=p?`${clamp((live-75)/525*100,0,100)}%`:'0%';$('pitchval').textContent=p?`${Math.round(live)} Hz`:'— Hz';applyStyle(smoothVolume,live);raf=requestAnimationFrame(monitor);}
+function setupRecognizer(){if(!SR)throw new Error('이 브라우저는 Web Speech API 음성 인식을 지원하지 않습니다. 최신 Chrome 또는 Edge를 이용해 주세요.');recognition=new SR();recognition.lang=$('language').value;recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=1;recognition.onresult=e=>{let interim='',finished=[];for(let i=e.resultIndex;i<e.results.length;i++){const result=e.results[i],s=result[0].transcript.trim();if(result.isFinal&&s)finished.push(s);else if(!result.isFinal)interim+=s+' ';}if(finished.length){finalText=finished.join(' ');const sp=speakers[currentSpeaker];historyEntries.push({name:sp.name,color:sp.color,text:finalText});if(document.getElementById("autoSaveTranscript")?.checked)saveTranscriptLocal();if(historyEntries.length>20)historyEntries=historyEntries.slice(-20);renderHistory();}interimText=interim.trim();captionText();};recognition.onerror=e=>{if(e.error==='no-speech')return;const map={'not-allowed':'마이크 또는 음성 인식 권한이 거부되었습니다. 브라우저 권한을 확인해 주세요.','audio-capture':'마이크를 사용할 수 없습니다.','network':'음성 인식 서비스 연결에 실패했습니다. 네트워크를 확인해 주세요.','language-not-supported':'선택한 언어는 지원되지 않습니다.'};showError(map[e.error]||`음성 인식 오류: ${e.error}`);if(['not-allowed','audio-capture','service-not-allowed'].includes(e.error))stop();};recognition.onend=()=>{if(!active||restarting)return;restarting=true;setTimeout(()=>{restarting=false;if(active){try{recognition.start();}catch(e){showError('음성 인식 재시작에 실패했습니다. 다시 시작해 주세요.');}}},450);};}
+async function start(){if(active)return;showError('');$('toggle').disabled=true;try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('마이크 접근이 지원되지 않습니다. HTTPS 또는 localhost에서 실행해 주세요.');setupRecognizer();stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});ctx=new (window.AudioContext||window.webkitAudioContext)();await ctx.resume();const source=ctx.createMediaStreamSource(stream);analyser=ctx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.65;source.connect(analyser);active=true;recognition.start();$('toggle').textContent='■ 마이크 중지';$('toggle').classList.add('active');setStatus('실시간 인식 중',true);monitor();}catch(e){showError(e.message||'마이크 시작에 실패했습니다.');await stop();}finally{$('toggle').disabled=false;}}
+async function stop(){active=false;cancelAnimationFrame(raf);if(recognition){recognition.onend=null;try{recognition.stop();}catch(_){ }recognition=null;}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}if(ctx){try{await ctx.close();}catch(_){}ctx=null;}analyser=null;$('toggle').textContent='● 마이크 시작';$('toggle').classList.remove('active');setStatus('대기 중');$('volume').style.width='0%';$('pitch').style.width='0%';$('pitchval').textContent='— Hz';applyStyle();}
+// Google Fonts CSS API: 화자별로 독립된 <link>를 요청합니다. 미지원 문자는 시스템 글꼴로 대체됩니다.
+function loadGoogleFont(family,target){
+target=target||currentSpeaker;
+const sp=speakers[target];
+family=family.trim();
+if(!family||family.length>100||!/^[\p{L}\p{N} ._\-]+$/u.test(family)){showError('정확한 Google Fonts 글꼴 이름을 입력해 주세요.');return;}
+if(sp.fontLink)sp.fontLink.remove();
+const link=document.createElement('link');
+link.rel='stylesheet';
+link.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(family).replace(/%20/g,'+')+'&display=swap';
+link.onload=()=>{if(target===currentSpeaker)$('fontinfo').textContent=`${family}: 웹폰트 스타일시트 요청 완료. 글꼴에 포함되지 않은 문자는 대체 글꼴로 표시됩니다.`;};
+link.onerror=()=>{if(target===currentSpeaker)$('fontinfo').textContent='웹폰트를 불러오지 못했습니다. 글꼴 이름, 인터넷 연결 상태를 확인해 주세요.';};
+document.head.appendChild(link);
+sp.fontLink=link;
+sp.fontFamily=family;
+sp.fontCSS=`${JSON.stringify(family)},'Noto Sans KR','Noto Sans JP',sans-serif`;
+if(target===currentSpeaker){
+$('fontname').value=family;
+$('fontinfo').textContent=`${family} 웹폰트를 불러오는 중입니다… (인터넷 필요)`;
+applyPersonaVisual();
+}
+}
+function resetFont(){
+const sp=speakers[currentSpeaker];
+sp.fontCSS='';sp.fontFamily='';
+if(sp.fontLink){sp.fontLink.remove();sp.fontLink=null;}
+if(sp.customFontFace){document.fonts.delete(sp.customFontFace);sp.customFontFace=null;}
+if(sp.fontObjectUrl){URL.revokeObjectURL(sp.fontObjectUrl);sp.fontObjectUrl=null;}
+$('fontname').value='';$('fontpreset').value='';$('fontfile').value='';
+$('fontinfo').textContent='기본 시스템 글꼴로 되돌렸습니다.';
+applyPersonaVisual();
+}
+$('fontpreset').addEventListener('change',e=>{if(e.target.value)loadGoogleFont(e.target.value);else resetFont();});
+$('fontapply').addEventListener('click',()=>loadGoogleFont($('fontname').value));
+$('fontname').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();loadGoogleFont($('fontname').value);}});
+$('fontfile').addEventListener('change',async e=>{
+const file=e.target.files?.[0];if(!file)return;
+if(!/\.(woff2?|ttf|otf)$/i.test(file.name)){showError('WOFF, WOFF2, TTF, OTF 파일만 사용할 수 있습니다.');return;}
+const sp=speakers[currentSpeaker];
+try{
+if(sp.customFontFace)document.fonts.delete(sp.customFontFace);
+if(sp.fontObjectUrl)URL.revokeObjectURL(sp.fontObjectUrl);
+sp.fontObjectUrl=URL.createObjectURL(file);
+const familyName='meRehUploaded_'+currentSpeaker;
+sp.customFontFace=new FontFace(familyName,`url("${sp.fontObjectUrl}")`);
+await sp.customFontFace.load();
+document.fonts.add(sp.customFontFace);
+sp.fontCSS=`${familyName},sans-serif`;
+sp.fontFamily=file.name;
+$('fontname').value='';$('fontpreset').value='';
+$('fontinfo').textContent=`${file.name} 적용 완료 · 이 브라우저 세션에서만 유지됩니다.`;
+showError('');
+applyPersonaVisual();
+}catch(err){showError('폰트 파일을 읽을 수 없습니다. 파일 형식을 확인해 주세요.');}
+});
+$('fontreset').addEventListener('click',resetFont);
+function refreshPersonaPanel(){
+const sp=speakers[currentSpeaker];
+$('personaTitle').textContent=`${sp.name} 스타일 편집 · 아래 글꼴 패널도 이 화자에 적용됩니다`;
+$('spName').value=sp.name;
+$('spTexture').value=sp.texture;
+$('spColor').value=sp.color;
+$('spSize').value=sp.size;$('spSizeVal').textContent=`${sp.size}/12`;setFill($('spSize'),1,12);
+$('spWeight').value=String(sp.weight);
+$('spReactivity').value=sp.reactivity;$('spReactivityVal').textContent=`${Number(sp.reactivity).toFixed(1)}×`;setFill($('spReactivity'),0.3,2);
+$('fontname').value=/^meRehUploaded_/.test(sp.fontCSS)?'':(sp.fontFamily||'');
+$('fontpreset').value=(!/^meRehUploaded_/.test(sp.fontCSS)&&[...$('fontpreset').options].some(o=>o.value===sp.fontFamily))?sp.fontFamily:'';
+$('fontfile').value='';
+$('fontinfo').textContent=sp.fontCSS?`${sp.fontFamily} 적용됨 (${sp.name})`:`기본 시스템 글꼴 (${sp.name})`;
+document.querySelectorAll('.speaker-btn').forEach(b=>{b.classList.toggle('active',b.dataset.speaker===currentSpeaker);});
+$('speakerRow').classList.toggle('pos-b',currentSpeaker==='B');
+$('spnameA').textContent=speakers.A.name;
+$('spnameB').textContent=speakers.B.name;
+$('spdotA').style.background=speakers.A.color;
+$('spdotB').style.background=speakers.B.color;
+updateSwatch();
+}
+document.querySelectorAll('.speaker-btn').forEach(btn=>{
+btn.addEventListener('click',()=>{
+currentSpeaker=btn.dataset.speaker;
+refreshPersonaPanel();
+applyPersonaVisual();
+});
+});
+$('spName').addEventListener('input',()=>{speakers[currentSpeaker].name=$('spName').value.trim()||currentSpeaker;refreshPersonaPanel();applyPersonaVisual();});
+$('spTexture').addEventListener('change',()=>{speakers[currentSpeaker].texture=$('spTexture').value;applyPersonaVisual();});
+$('spColor').addEventListener('input',()=>{speakers[currentSpeaker].color=$('spColor').value;applyPersonaVisual();refreshPersonaPanel();});
+$('spSize').addEventListener('input',()=>{speakers[currentSpeaker].size=Number($('spSize').value);$('spSizeVal').textContent=`${$('spSize').value}/12`;setFill($('spSize'),1,12);applyStyle(smoothVolume,lastPitch);});
+$('spWeight').addEventListener('change',()=>{speakers[currentSpeaker].weight=Number($('spWeight').value);applyStyle(smoothVolume,lastPitch);});
+$('spReactivity').addEventListener('input',()=>{speakers[currentSpeaker].reactivity=Number($('spReactivity').value);$('spReactivityVal').textContent=`${Number($('spReactivity').value).toFixed(1)}×`;setFill($('spReactivity'),0.3,2);applyStyle(smoothVolume,lastPitch);});
+$('toggle').addEventListener('click',()=>active?stop():start());
+$('clear').addEventListener('click',()=>{finalText='';interimText='';historyEntries=[];localStorage.removeItem(STORE_TRANSCRIPT);renderHistory();captionText();showError('');});
+$('sample').addEventListener('click',()=>{const t=['안녕하세요. 여러분의 목소리가 글자가 되는 순간입니다.','목소리의 크기와 높낮이가 자막의 모습에 반영됩니다.','우리의 목소리에는 저마다 다른 리듬이 있습니다.'];finalText=t[Math.floor(Math.random()*t.length)];interimText='';captionText();showError('예시 모드입니다. 실제 음성 인식 결과가 아닙니다.');});
+$('full').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();}catch(e){showError('전체 화면 전환이 제한되었습니다.');}});
+$('motion').addEventListener('change',()=>applyStyle(smoothVolume,lastPitch));
+$('contrast').addEventListener('change',()=>{$('app').classList.toggle('contrast',$('contrast').checked);applyStyle(smoothVolume,lastPitch);});
+$('language').addEventListener('change',()=>{if(active){showError('언어를 변경했습니다. 적용하려면 마이크를 중지한 후 다시 시작해 주세요.');}});
+window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());});
+// 설정과 기록의 저장은 사용자가 실행하거나 선택했을 때만 이뤄집니다.
+const STORE_SETTINGS='mereh.v023.settings',STORE_TRANSCRIPT='mereh.v023.transcripts';
+const announce=t=>{$('localMsg').textContent=t};
+function sanitizeSpeaker(v,base){const out={...base};if(!v||typeof v!=='object')return out;
+if(typeof v.name==='string')out.name=v.name.slice(0,12);
+if(TEXTURES.includes(v.texture)||v.texture==='solid')out.texture=v.texture;
+if(typeof v.color==='string'&&/^#[0-9a-f]{6}$/i.test(v.color))out.color=v.color;
+if(Number.isFinite(v.size))out.size=clamp(Math.round(v.size),1,12);
+if([400,500,700,800].includes(v.weight))out.weight=v.weight;
+if(Number.isFinite(v.reactivity))out.reactivity=clamp(v.reactivity,.3,2);
+if(typeof v.fontFamily==='string'&&v.fontFamily.length<90&&/^[\p{L}\p{N} ._\-]+$/u.test(v.fontFamily))out.fontFamily=v.fontFamily;
+out.fontCSS='';out.fontLink=null;out.customFontFace=null;out.fontObjectUrl=null;return out;}
+function snapshot(){const pick=x=>({name:x.name,texture:x.texture,color:x.color,size:x.size,weight:x.weight,reactivity:x.reactivity,fontFamily:x.fontFamily?.startsWith('meRehUploaded_')?'':x.fontFamily});return {schema:'me-Reh-settings-v1',appVersion:'0.2.3',language:$('language').value,contrast:$('contrast').checked,motion:$('motion').checked,reduceMotion:$('reduceMotion').checked,autoSaveTranscript:$('autoSaveTranscript').checked,speakers:{A:pick(speakers.A),B:pick(speakers.B)}};}
+function saveSettingsLocal(){try{localStorage.setItem(STORE_SETTINGS,JSON.stringify(snapshot()));announce('설정 저장 완료 · 현재 브라우저의 localStorage에 저장됨');}catch(e){announce('로컬 저장에 실패했습니다. 브라우저 저장 권한을 확인하세요.');}}
+function saveTranscriptLocal(){try{localStorage.setItem(STORE_TRANSCRIPT,JSON.stringify(historyEntries.slice(-20)));}catch(e){announce('자막 기록 저장에 실패했습니다.');}}
+function restoreSettings(v){if(!v||v.schema!=='me-Reh-settings-v1')throw new Error('지원하지 않는 설정 파일입니다');for(const id of ['A','B'])Object.assign(speakers[id],sanitizeSpeaker(v.speakers?.[id],speakers[id]));
+if(['ko-KR','en-US','ja-JP'].includes(v.language))$('language').value=v.language;
+$('contrast').checked=!!v.contrast;$('motion').checked=v.motion!==false;$('reduceMotion').checked=!!v.reduceMotion;$('autoSaveTranscript').checked=!!v.autoSaveTranscript;
+$('app').classList.toggle('contrast',$('contrast').checked);document.documentElement.classList.toggle('reduce-motion',$('reduceMotion').checked);
+for(const id of ['A','B'])if(speakers[id].fontFamily)loadGoogleFont(speakers[id].fontFamily,id);
+refreshPersonaPanel();applyPersonaVisual();}
+function downloadText(name,contents,mime){const url=URL.createObjectURL(new Blob([contents],{type:mime}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+$('saveSettings').addEventListener('click',saveSettingsLocal);
+$('exportSettings').addEventListener('click',()=>downloadText('me-Reh_settings.json',JSON.stringify(snapshot(),null,2),'application/json;charset=utf-8'));
+$('importSettings').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{if(f.size>100000)throw new Error('설정 파일이 너무 큽니다');restoreSettings(JSON.parse(await f.text()));announce('설정 JSON 가져오기 완료');}catch(err){announce('설정 가져오기 실패: '+err.message);}e.target.value='';});
+$('exportTranscript').addEventListener('click',()=>{const lines=historyEntries.map(h=>`[${h.name}] ${h.text}`);downloadText('me-Reh_transcript.txt',lines.join('\n'),'text/plain;charset=utf-8');announce('현재 자막 기록을 TXT로 저장했습니다');});
+$('clearSaved').addEventListener('click',()=>{localStorage.removeItem(STORE_SETTINGS);localStorage.removeItem(STORE_TRANSCRIPT);$('autoSaveTranscript').checked=false;historyEntries=[];renderHistory();announce('현재 브라우저의 저장 설정 및 자막 기록을 삭제했습니다');});
+$('reduceMotion').addEventListener('change',e=>document.documentElement.classList.toggle('reduce-motion',e.target.checked));
+try{const saved=localStorage.getItem(STORE_SETTINGS);if(saved)restoreSettings(JSON.parse(saved));else{loadGoogleFont(speakers.A.fontFamily,'A');loadGoogleFont(speakers.B.fontFamily,'B');}}catch(e){announce('이전에 저장된 설정을 읽지 못했습니다. 기본 설정으로 시작합니다.');loadGoogleFont(speakers.A.fontFamily,'A');loadGoogleFont(speakers.B.fontFamily,'B');}
+try{if($('autoSaveTranscript').checked){const data=JSON.parse(localStorage.getItem(STORE_TRANSCRIPT)||'[]');if(Array.isArray(data)){historyEntries=data.filter(e=>typeof e.text==='string'&&typeof e.name==='string').slice(-20);renderHistory();}}}catch(e){}
+
+refreshPersonaPanel();
+applyPersonaVisual();
+})();
+</script>
+</body></html>
