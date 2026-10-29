@@ -2,7 +2,9 @@
 
 Copyright © 2026. 김경민 All rights reserved.
 
-> **최신 버전 v0.3:** 단어별 목소리 타이포그래피 · 누적 구성 · 로컬 Whisper(오프라인) → [v0.3 폴더](v0.3/README.md)
+> **v0.4 설치 버전:** 목소리 나선, 전시장에서 오프라인으로 계속 돌아가는 3D 설치 작품 → [v0.4-installation 폴더](v0.4-installation/README.md)
+>
+> **v0.3:** 단어별 목소리 타이포그래피 · 누적 구성 · 로컬 Whisper(오프라인) → [v0.3 폴더](v0.3/README.md)
 >
 > ![누적 구성 예시](v0.3/images/누적구성_16x9.jpg)
 
