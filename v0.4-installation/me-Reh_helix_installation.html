@@ -25,10 +25,13 @@ body.cursor{cursor:default}
 #read .t{font:500 max(18px,1.7vw)/1 var(--mono);letter-spacing:-.02em}
 #read .w{font-weight:700;font-size:max(16px,1.5vw);line-height:1.2}
 #read .v{font:400 max(10px,.75vw)/1.5 var(--mono);color:var(--dim)}
-#prompt{left:50%;top:11vh;transform:translateX(-50%);text-align:center;transition:opacity 1.2s ease;display:grid;gap:1.6vh}
-#prompt .big{font-weight:700;font-size:max(30px,3.6vw);letter-spacing:-.02em}
+#prompt{left:50%;top:11vh;transform:translateX(-50%);text-align:center;display:grid;gap:1.6vh}
+#prompt .big{font-weight:700;font-size:max(24px,2.4vw);letter-spacing:-.02em}
 #prompt .small{font:400 max(12px,.95vw)/1.6 var(--mono);color:var(--dim);letter-spacing:.04em}
-#prompt.off{opacity:0}
+#keys{left:50%;bottom:4.2vh;transform:translateX(-50%);display:flex;gap:2.6vw;font:500 max(13px,1.05vw)/1 var(--mono);letter-spacing:.14em;white-space:nowrap}
+#keys span{opacity:.32;transition:opacity .4s ease}
+#keys span.on{opacity:1}
+#keys b{font-weight:700;margin-left:.6em;padding:.28em .55em;border:1px solid currentColor;border-radius:2px;letter-spacing:0}
 #status{right:3vw;bottom:4.2vh;text-align:right;font:400 max(10px,.7vw)/1.6 var(--mono);color:var(--dim)}
 #status .dot{display:inline-block;width:.55em;height:.55em;border-radius:50%;background:var(--dim);margin-right:.5em;vertical-align:.05em}
 #status .dot.ok{background:var(--fg)}
@@ -43,7 +46,7 @@ body.cursor{cursor:default}
 #help .k b{font-weight:500}
 #help .cal{margin-top:8px;color:var(--dim);font-size:12px}
 [hidden]{display:none!important}
-@media (prefers-reduced-motion:reduce){#prompt{transition:none}}
+@media (prefers-reduced-motion:reduce){#keys span{transition:none}}
 </style>
 </head>
 <body>
@@ -59,10 +62,11 @@ body.cursor{cursor:default}
   <div class="w" id="rW"></div>
   <div class="v" id="rV"></div>
 </div>
-<div class="corner" id="prompt">
-  <div class="big" id="pBig">마이크에 말을 걸어 주세요</div>
-  <div class="small" id="pSmall">목소리의 크기와 높낮이가 선으로 된 글자로 남습니다<br>Speak — your voice is drawn as lines</div>
+<div class="corner" id="prompt" hidden>
+  <div class="big" id="pBig"></div>
+  <div class="small" id="pSmall"></div>
 </div>
+<div class="corner" id="keys"><span id="kStart" class="on">Start<b>1</b></span><span id="kStop">Stop<b>2</b></span></div>
 <div class="corner" id="status"><span class="dot" id="sDot"></span><span id="sTxt">준비 중</span></div>
 <div id="gate" hidden><div><b>화면을 한 번 누르면 시작합니다</b><span>마이크 사용을 허용해 주세요</span></div></div>
 <div id="help" hidden>
@@ -71,8 +75,12 @@ body.cursor{cursor:default}
   <div class="k"><span>전체 화면</span><b>F</b></div>
   <div class="k"><span>흑백 반전</span><b>I</b></div>
   <div class="k"><span>수치·측정선 켜기/끄기</span><b>D</b></div>
-  <div class="k"><span>화자 A (가로 결) / B (세로 결)</span><b>1 / 2</b></div>
-  <div class="k"><span>지금 세션 끝내고 저장</span><b>S</b></div>
+  <div class="k"><span>기록 시작</span><b>1</b></div>
+  <div class="k"><span>기록 끝내고 저장</span><b>2</b></div>
+  <div class="k"><span>화자 A (가로 결) / B (세로 결)</span><b>A / B</b></div>
+  <div class="k"><span>돌려 보기 / 확대·축소</span><b>끌기 / 휠</b></div>
+  <div class="k"><span>위아래로 옮기기</span><b>오른쪽 끌기</b></div>
+  <div class="k"><span>자동 시점으로 돌아가기</span><b>두 번 클릭</b></div>
   <div class="cal" id="cal"></div>
 </div>
 
@@ -82,11 +90,12 @@ body.cursor{cursor:default}
 /* =========================================================================
    미래 me-Reh v0.4 — 목소리 나선 (설치 버전)
    마이크 → 음량·음높이 프레임 → 발화마다 로컬 Whisper → 단어별 시간
-   → 나선 위에 선으로 된 글자로 쌓임. 말이 멈추면 세션을 저장하고 다음 관람객을 기다림.
+   → 나선 위에 선으로 된 글자로 쌓임. 1번으로 기록을 시작하고 2번으로 끝내 저장함.
    ========================================================================= */
 const Q=new URLSearchParams(location.search);
 const CFG={
-  idle:+Q.get('idle')||40,          // 이 시간(초) 동안 말이 없으면 세션 종료·저장
+  idle:+Q.get('idle')||0,           // 0이 아니면: 이 시간(초) 동안 말이 없을 때 자동으로 끝내고 저장
+  auto:Q.get('auto')==='1'||Q.get('demo')==='1', // 1이면 1번 없이 목소리가 들리면 바로 기록 시작
   maxSess:+Q.get('max')||600,       // 세션 최대 길이(초)
   lang:Q.get('lang')||'ko',         // 인식 언어 ko / en / ja
   invert:Q.get('invert')==='1',     // 흰 바탕
@@ -163,7 +172,7 @@ function audioStep(){
   if(!an)return;an.getFloatTimeDomainData(tbuf);let s=0;for(const x of tbuf)s+=x*x;
   const db=20*Math.log10(Math.sqrt(s/tbuf.length)+1e-9);updateLevels(db);
   const v=volOf(db),f={t:now(),v,hz:v>.05?detectPitch(tbuf,ac.sampleRate):0};
-  onFrame(f);if(ws&&ws.readyState===1)vadStep(f);
+  onFrame(f);if(ws&&ws.readyState===1&&((S.state==='active'&&!S.stopping)||CFG.auto||vad.on))vadStep(f);
 }
 function pcmBetween(t0,t1){
   const parts=[];let total=0;
@@ -285,7 +294,7 @@ let vrun=0;
 
 function onFrame(f){
   pushFrame(f);
-  if(f.v>.08){if(++vrun>=4){S.lastVoice=f.t;if(S.state==='idle')startSession(f.t-.45);}}else vrun=0;
+  if(f.v>.08){if(++vrun>=4){S.lastVoice=f.t;if(S.state==='idle'&&CFG.auto)startSession(f.t-.45);}}else vrun=0;
 }
 function startSession(t0){
   disposeTree(sessG);reveals=[];fades=[];tickLabelT=0;turnLabelK=0;partialSpr=null;
@@ -305,7 +314,7 @@ function startSession(t0){
     [100,125,150,170,200,250,300].forEach(hz=>{const y=b+pitchY(hz);arr.push(...P(t,R+60,y),...P(t,R+72,y));const l=label([`${hz} Hz`],{px:19,scale:.23,op:hz===170?1:.7});l.position.set(...P(t,R+78,y));dataG.add(l);});
     dataG.add(segObj(arr,mat(.55)));
   }
-  cursorG.visible=true;$('prompt').classList.add('off');
+  cursorG.visible=true;user.active=false;
 }
 function sessT(abs){return abs-S.t0;}
 function addSilence(ta,tb){
@@ -314,7 +323,7 @@ function addSilence(ta,tb){
 }
 function onWords(list,sp){
   if(S.state==='ending')return;
-  if(S.state!=='active')startSession(list[0].a-.3);
+  if(S.state!=='active'){if(!CFG.auto)return;startSession(list[0].a-.3);}
   const born=now(),pts=[],cross=[];
   list.forEach(item=>{
     const w=wordAt(item.w.replace(/^[.,!?…·"'“”‘’]+|[.,!?…·"'“”‘’]+$/g,'')||item.w,item.a,Math.max(item.b,item.a+.08),sp);
@@ -354,7 +363,7 @@ function setPartial(text){
 /* ---------- 세션 끝: 전체가 보이게 찍어서 저장 ---------- */
 function endSession(){
   if(S.state!=='active')return;S.state='ending';
-  if(!S.words.length){disposeTree(sessG);S={state:'idle',t0:0,dur:0,words:[],lastEnd:null,i:0};cursorG.visible=false;$('prompt').classList.remove('off');return;}
+  if(!S.words.length){disposeTree(sessG);S={state:'idle',t0:0,dur:0,words:[],lastEnd:null,i:0};cursorG.visible=false;return;}
   S.dur=Math.max(1,S.lastEnd);
   reveals.forEach(r=>r.o.geometry.setDrawRange(0,r.n));reveals=[];
   fades.forEach(f=>{f.spr.material.opacity=1;f.leader.visible=true;});fades=[];
@@ -381,7 +390,7 @@ function endSession(){
       .then(r=>r.json()).then(m=>{window.__lastArchive=m;setStatus(!!ws,`저장됨 · ${m.saved||''}`);setTimeout(()=>setStatus(!!ws||CFG.demo,ws?`Whisper 오프라인 인식 · ${wsInfo}`:CFG.demo?'데모 모드':'인식 프로그램 연결 중…'),6000);})
       .catch(()=>setStatus(false,'세션 저장 실패 · 인식 프로그램 창을 확인해 주세요'));
   window.__lastSession=json;
-  S.state='idle';$('prompt').classList.remove('off');
+  S.state='idle';user.active=false;
 }
 
 /* =========================================================================
@@ -420,13 +429,46 @@ function demoStep(){
     if(e.type==='partial')setPartial(e.text);else{speaker=e.sp;onWords(e.words.map(w=>({w:w.w,a:demo.D0+w.a,b:demo.D0+w.b})),e.sp);setPartial('');}}
 }
 
+/* ---------- 1번 Start / 2번 Stop ---------- */
+function startRecording(){if(S.state==='idle'){startSession(now()-.2);vad.on=false;}}
+function requestStop(){
+  if(S.state!=='active'||S.stopping)return;
+  if(vad.on)closeUtt(now());          // 말하던 중이면 그 발화까지 인식시킨 뒤 저장
+  S.stopping=true;S.stopAt=now();
+}
+
+/* ---------- 마우스로 돌려 보기 ----------
+   끌기 = 회전, 휠·두 손가락 = 확대/축소, 오른쪽 끌기·Shift+끌기 = 위아래 이동,
+   두 번 클릭 = 자동 시점. 손을 뗀 뒤 12초가 지나면 자동 시점으로 돌아감 */
+const user={active:false,last:0};
+function touchUser(){if(!user.active){Object.assign(goal,cam);user.active=true;}user.last=now();}
+function userCam(){if(user.active&&now()-user.last>12)user.active=false;return user.active;}
+let curTimer=0;
+function showCursor(){document.body.classList.add('cursor');clearTimeout(curTimer);curTimer=setTimeout(()=>{if($('help').hidden)document.body.classList.remove('cursor');},3000);}
+function bindMouse(cv){
+  const ptr=new Map();let pinch=0,mode='rot';
+  addEventListener('pointermove',showCursor);
+  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,[e.clientX,e.clientY]);mode=(e.button===2||e.shiftKey)?'pan':'rot';
+    if(ptr.size===2){const[a,b]=[...ptr.values()];pinch=Math.hypot(a[0]-b[0],a[1]-b[1]);}});
+  cv.addEventListener('pointermove',e=>{if(!ptr.has(e.pointerId))return;const p=ptr.get(e.pointerId),dx=e.clientX-p[0],dy=e.clientY-p[1];ptr.set(e.pointerId,[e.clientX,e.clientY]);
+    if(!dx&&!dy)return;touchUser();
+    if(ptr.size===2){const[a,b]=[...ptr.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pinch)goal.dist=clamp(goal.dist*pinch/d,400,30000);pinch=d;}
+    else if(mode==='pan')goal.ty+=dy*goal.dist*.0011;
+    else{goal.theta-=dx*.006;goal.phi=clamp(goal.phi-dy*.005,.06,2.9);}});
+  const up=e=>{ptr.delete(e.pointerId);pinch=0;};
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  cv.addEventListener('contextmenu',e=>e.preventDefault());
+  cv.addEventListener('wheel',e=>{e.preventDefault();touchUser();goal.dist=clamp(goal.dist*(1+e.deltaY*.0012),400,30000);},{passive:false});
+  cv.addEventListener('dblclick',()=>{user.active=false;});
+}
+
 /* =========================================================================
    7. 카메라와 매 프레임 갱신
    ========================================================================= */
 const cam={theta:.35,phi:1.25,dist:2200,ty:0},goal={...cam};
 function fitDist(d){const a=innerWidth/innerHeight;return d*(a<1?Math.min(2.2,1.1/a):1);}
 function applyCam(snap){
-  if(!snap)for(const k of ['theta','phi','dist','ty'])cam[k]+=(goal[k]-cam[k])*.05;
+  if(!snap){const e=user.active?.25:.05;for(const k of ['theta','phi','dist','ty'])cam[k]+=(goal[k]-cam[k])*e;}
   const s=Math.sin(cam.phi);camera.position.set(cam.dist*s*Math.sin(cam.theta),cam.ty+cam.dist*Math.cos(cam.phi),cam.dist*s*Math.cos(cam.theta));
   camera.lookAt(0,cam.ty,0);fog.near=cam.dist*.7;fog.far=cam.dist*(S.state==='active'?1.6:2.2);
 }
@@ -453,15 +495,16 @@ function frame(ts){
     // 카메라: 지금 쓰이는 자리가 늘 앞을 보도록 나선을 따라 돎
     // 카메라는 방금 새겨진 단어를 정면에 둠. 말이 멈춘 동안에는 그 자리에 머물고, 새 단어가 새겨지면 따라감
     const focus=S.lastEnd!=null?S.lastEnd-.4:nt-.8;
-    goal.theta=Math.PI/2-ang(focus);goal.phi=1.32;goal.dist=fitDist(1650);goal.ty=base(focus)+120;
+    if(!userCam()){goal.theta=Math.PI/2-ang(focus);goal.phi=1.32;goal.dist=fitDist(1650);goal.ty=base(focus)+120;}
     floorG.position.y=y-320;
     if(S.snap){Object.assign(cam,goal);S.snap=false;}  // 세션 시작 때는 바로 그 자리로
-    if(tn-S.lastVoice>CFG.idle&&!awaiting()&&!vad.on)endSession();
-    else if(nt>CFG.maxSess)endSession();
+    if(S.stopping){if(!awaiting()||tn-S.stopAt>8)endSession();}     // 2번: 남은 인식 결과를 받은 뒤 저장
+    else if(CFG.idle>0&&tn-S.lastVoice>CFG.idle&&!awaiting()&&!vad.on)endSession();
+    else if(nt>CFG.maxSess)requestStop();
   }else{
-    goal.theta+=dt*.07;goal.phi=1.25;
-    if(S.dur>0){const H=S.dur/TURN*TURN_H+460;goal.dist=fitDist(Math.max(2150,H/2/Math.tan(16*Math.PI/180)*1.08));goal.ty=base(S.dur/2)-40;floorG.position.y=base(S.dur)-320;}
-    else{goal.dist=fitDist(2050);goal.ty=0;floorG.position.y=-320;}
+    const auto=!userCam();if(auto){goal.theta+=dt*.07;goal.phi=1.25;}
+    if(S.dur>0){const H=S.dur/TURN*TURN_H+460;if(auto){goal.dist=fitDist(Math.max(2150,H/2/Math.tan(16*Math.PI/180)*1.08));goal.ty=base(S.dur/2)-40;}floorG.position.y=base(S.dur)-320;}
+    else{if(auto){goal.dist=fitDist(2050);goal.ty=0;}floorG.position.y=-320;}
   }
   // 글자가 선으로 그려지는 애니메이션
   reveals=reveals.filter(r=>{const f=clamp((tn-r.born-r.delay)/.7,0,1);r.o.geometry.setDrawRange(0,2*Math.floor(f*r.n/2));return f<1;});
@@ -474,16 +517,17 @@ function frame(ts){
   requestAnimationFrame(frame);
 }
 function hud(){
-  if(S.state==='active'){$('rT').textContent=fmt(S.dur);$('sess').textContent=`세션 ${String(sessCount).padStart(3,'0')} · 기록 중 · ${S.words.length}단어`;}
+  const rec=S.state==='active';$('kStart').classList.toggle('on',!rec);$('kStop').classList.toggle('on',rec&&!S.stopping);
+  if(S.state==='active'){$('rT').textContent=fmt(S.dur);$('sess').textContent=`세션 ${String(sessCount).padStart(3,'0')} · ${S.stopping?'저장 중':'기록 중'} · ${S.words.length}단어`;}
   else{$('rT').textContent='';$('rW').textContent='';$('rV').textContent='';$('sess').textContent=S.words.length?`지난 세션 ${String(sessCount).padStart(3,'0')} · ${S.words.length}단어 · ${fmt(S.dur)}`:'대기 중';}
-  if(!$('help').hidden)$('cal').textContent=`입력 ${Math.round(lv.db)} dB · 소음 ${Math.round(lv.floor)} · 큰 소리 ${Math.round(lv.peak)} · 대기 전환 ${CFG.idle}초 · ${CFG.demo?'데모':wsInfo||'인식 연결 대기'}`;
+  if(!$('help').hidden)$('cal').textContent=`입력 ${Math.round(lv.db)} dB · 소음 ${Math.round(lv.floor)} · 큰 소리 ${Math.round(lv.peak)} · 자동 종료 ${CFG.idle?CFG.idle+'초':'끔'} · ${CFG.demo?'데모':wsInfo||'인식 연결 대기'}`;
 }
 
 /* =========================================================================
    8. 시작
    ========================================================================= */
 async function boot(){
-  if(!window.THREE){$('pBig').textContent='3D 라이브러리를 찾을 수 없습니다';$('pSmall').textContent='vendor/three.min.js 파일이 이 페이지와 같은 폴더에 있는지 확인해 주세요';return;}
+  if(!window.THREE){$('prompt').hidden=false;$('pBig').textContent='3D 라이브러리를 찾을 수 없습니다';$('pSmall').textContent='vendor/three.min.js 파일이 이 페이지와 같은 폴더에 있는지 확인해 주세요';return;}
   if(CFG.invert)document.documentElement.classList.add('inv');
   renderer=new THREE.WebGLRenderer({canvas:$('gl'),antialias:true,preserveDrawingBuffer:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.setSize(innerWidth,innerHeight,false);
@@ -499,14 +543,15 @@ async function boot(){
     else if(k==='f'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{});}
     else if(k==='i'){document.documentElement.classList.toggle('inv');applyTheme();}
     else if(k==='d'){CFG.data=!CFG.data;if(dataG)dataG.visible=CFG.data;scaf.visible=CFG.data;}
-    else if(k==='1')speaker='A';else if(k==='2')speaker='B';
-    else if(k==='s')endSession();});
+    else if(k==='1')startRecording();else if(k==='2')requestStop();
+    else if(k==='a')speaker='A';else if(k==='b')speaker='B';});
+  bindMouse($('gl'));
   scaf.visible=CFG.data;
   if(CFG.demo){setStatus(true,'데모 모드 · 예시 대사');}
   else{
-    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('pBig').textContent='이 브라우저에서는 마이크를 쓸 수 없습니다';$('pSmall').textContent='start_installation.command 로 실행해 주세요';}
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('prompt').hidden=false;$('pBig').textContent='이 브라우저에서는 마이크를 쓸 수 없습니다';$('pSmall').textContent='start_installation.command 로 실행해 주세요';}
     else try{await startMic();wsConnect();}
-    catch(e){$('pBig').textContent='마이크를 열 수 없습니다';$('pSmall').textContent=`마이크 연결과 Chrome의 마이크 허용을 확인해 주세요 (${e.name||e.message})`;}
+    catch(e){$('prompt').hidden=false;$('pBig').textContent='마이크를 열 수 없습니다';$('pSmall').textContent=`마이크 연결과 Chrome의 마이크 허용을 확인해 주세요 (${e.name||e.message})`;}
   }
   requestAnimationFrame(frame);
 }

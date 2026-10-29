@@ -2,7 +2,9 @@
 # 미래 me-Reh v0.4 — 목소리 나선 전시 실행 (인터넷 없이 동작)
 # 이 파일을 텍스트 편집기로 열어 아래 설정을 바꿀 수 있습니다.
 # ─────────────────────────────────────────────────────────────
-IDLE=40        # 이 시간(초) 동안 말이 없으면 세션을 저장하고 다음 관람객을 기다림
+# 기록은 키보드 1번(Start)으로 시작하고 2번(Stop)으로 끝내 저장합니다.
+IDLE=0         # 0이 아니면: 이 시간(초) 동안 말이 없을 때 자동으로 끝내고 저장
+AUTO_START=0   # 1 = 1번을 누르지 않아도 목소리가 들리면 바로 기록 시작
 LANG_CODE=ko   # 인식 언어: ko 한국어 / en 영어 / ja 일본어
 INVERT=0       # 1 = 흰 바탕에 검은 선
 DATA=1         # 0 = 수치·측정선 숨김 (글자 선만)
@@ -11,7 +13,7 @@ MODEL="${MEREH_MODEL:-mlx-community/whisper-large-v3-turbo}"
 # ─────────────────────────────────────────────────────────────
 cd "$(dirname "$0")" || exit 1
 PORT=8765
-URL="http://localhost:$PORT/?idle=$IDLE&lang=$LANG_CODE&invert=$INVERT&data=$DATA&demo=$DEMO"
+URL="http://localhost:$PORT/?idle=$IDLE&auto=$AUTO_START&lang=$LANG_CODE&invert=$INVERT&data=$DATA&demo=$DEMO"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 if [ ! -x .venv/bin/python ]; then
@@ -25,6 +27,7 @@ fi
 
 echo ""
 echo "  미래 me-Reh · 목소리 나선 (설치)"
+echo "  기록: 1번 Start / 2번 Stop · 마우스로 돌려 보기·확대/축소"
 echo "  전시 화면을 끝내려면 Chrome에서 ⌘Q 를 누르세요. 인식 프로그램도 함께 꺼집니다."
 echo "  세션 기록은 이 폴더의 archive 에 저장됩니다."
 echo ""
