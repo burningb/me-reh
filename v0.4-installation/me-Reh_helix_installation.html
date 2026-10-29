@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>미래 me-Reh · 목소리 나선 (설치)</title>
+<style>
+/* 전시 화면: 3D 무대가 전부이고, 글씨는 모서리에 작게 */
+:root{
+  --bg:#0a0a0a; --fg:#f0f0ec; --dim:rgba(240,240,236,.58); --line:rgba(240,240,236,.22); --panel:rgba(10,10,10,.82);
+  --sans:'Apple SD Gothic Neo','Noto Sans KR','Noto Sans CJK KR','Malgun Gothic',sans-serif;
+  --mono:'SF Mono',Menlo,'IBM Plex Mono','DejaVu Sans Mono',monospace;
+  color-scheme:dark;
+}
+:root.inv{--bg:#f2f2ee; --fg:#111110; --dim:rgba(17,17,16,.6); --line:rgba(17,17,16,.22); --panel:rgba(242,242,238,.88); color-scheme:light}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:var(--sans);overflow:hidden;cursor:none}
+body.cursor{cursor:default}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+.corner{position:fixed;z-index:2;pointer-events:none}
+#brand{left:3vw;bottom:4.2vh;display:grid;gap:.6vh}
+#brand .eb{font:500 max(11px,.75vw)/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+#brand h1{margin:0;font-weight:800;font-size:max(28px,3.1vw);letter-spacing:-.03em;line-height:1}
+#brand .sess{font:400 max(11px,.8vw)/1.5 var(--mono);color:var(--dim);font-variant-numeric:tabular-nums}
+#read{right:3vw;top:4vh;text-align:right;display:grid;gap:.5vh;font-variant-numeric:tabular-nums}
+#read .t{font:500 max(18px,1.7vw)/1 var(--mono);letter-spacing:-.02em}
+#read .w{font-weight:700;font-size:max(16px,1.5vw);line-height:1.2}
+#read .v{font:400 max(10px,.75vw)/1.5 var(--mono);color:var(--dim)}
+#prompt{left:50%;top:11vh;transform:translateX(-50%);text-align:center;transition:opacity 1.2s ease;display:grid;gap:1.6vh}
+#prompt .big{font-weight:700;font-size:max(30px,3.6vw);letter-spacing:-.02em}
+#prompt .small{font:400 max(12px,.95vw)/1.6 var(--mono);color:var(--dim);letter-spacing:.04em}
+#prompt.off{opacity:0}
+#status{right:3vw;bottom:4.2vh;text-align:right;font:400 max(10px,.7vw)/1.6 var(--mono);color:var(--dim)}
+#status .dot{display:inline-block;width:.55em;height:.55em;border-radius:50%;background:var(--dim);margin-right:.5em;vertical-align:.05em}
+#status .dot.ok{background:var(--fg)}
+#gate{position:fixed;inset:0;z-index:5;display:grid;place-items:center;background:var(--bg);cursor:pointer;text-align:center}
+#gate div{display:grid;gap:12px}
+#gate b{font-size:28px}
+#gate span{font:400 13px/1.6 var(--mono);color:var(--dim)}
+#help{position:fixed;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--panel);border:1px solid var(--line);
+  padding:22px 26px;min-width:min(520px,90vw);font:400 13px/1.9 var(--mono);display:grid;gap:4px}
+#help h2{margin:0 0 6px;font:700 16px var(--sans)}
+#help .k{display:flex;justify-content:space-between;gap:24px}
+#help .k b{font-weight:500}
+#help .cal{margin-top:8px;color:var(--dim);font-size:12px}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){#prompt{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="gl" aria-hidden="true"></canvas>
+
+<div class="corner" id="brand">
+  <div class="eb">목소리 나선 · voice helix</div>
+  <h1>미래 me-Reh</h1>
+  <div class="sess" id="sess">대기 중</div>
+</div>
+<div class="corner" id="read" aria-live="polite">
+  <div class="t" id="rT"></div>
+  <div class="w" id="rW"></div>
+  <div class="v" id="rV"></div>
+</div>
+<div class="corner" id="prompt">
+  <div class="big" id="pBig">마이크에 말을 걸어 주세요</div>
+  <div class="small" id="pSmall">목소리의 크기와 높낮이가 선으로 된 글자로 남습니다<br>Speak — your voice is drawn as lines</div>
+</div>
+<div class="corner" id="status"><span class="dot" id="sDot"></span><span id="sTxt">준비 중</span></div>
+<div id="gate" hidden><div><b>화면을 한 번 누르면 시작합니다</b><span>마이크 사용을 허용해 주세요</span></div></div>
+<div id="help" hidden>
+  <h2>조작 (전시 운영자용)</h2>
+  <div class="k"><span>도움말 열기·닫기</span><b>H</b></div>
+  <div class="k"><span>전체 화면</span><b>F</b></div>
+  <div class="k"><span>흑백 반전</span><b>I</b></div>
+  <div class="k"><span>수치·측정선 켜기/끄기</span><b>D</b></div>
+  <div class="k"><span>화자 A (가로 결) / B (세로 결)</span><b>1 / 2</b></div>
+  <div class="k"><span>지금 세션 끝내고 저장</span><b>S</b></div>
+  <div class="cal" id="cal"></div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script>
+'use strict';
+/* =========================================================================
+   미래 me-Reh v0.4 — 목소리 나선 (설치 버전)
+   마이크 → 음량·음높이 프레임 → 발화마다 로컬 Whisper → 단어별 시간
+   → 나선 위에 선으로 된 글자로 쌓임. 말이 멈추면 세션을 저장하고 다음 관람객을 기다림.
+   ========================================================================= */
+const Q=new URLSearchParams(location.search);
+const CFG={
+  idle:+Q.get('idle')||40,          // 이 시간(초) 동안 말이 없으면 세션 종료·저장
+  maxSess:+Q.get('max')||600,       // 세션 최대 길이(초)
+  lang:Q.get('lang')||'ko',         // 인식 언어 ko / en / ja
+  invert:Q.get('invert')==='1',     // 흰 바탕
+  data:Q.get('data')!=='0',         // 수치·측정선
+  demo:Q.get('demo')==='1',         // 마이크 없이 예시 대사로 돌림
+  loop:Q.get('loop')!=='0',         // 데모 반복
+};
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const now=()=>performance.now()/1000;
+const SANS="'Apple SD Gothic Neo','Noto Sans KR','Noto Sans CJK KR','Malgun Gothic',sans-serif";
+const MONO="'SF Mono',Menlo,'IBM Plex Mono','DejaVu Sans Mono',monospace";
+const dB=v=>Math.round(40+v*36);
+const fmt=s=>{s=Math.max(0,s);const m=Math.floor(s/60);return `${String(m).padStart(2,'0')}:${(s-m*60).toFixed(1).padStart(4,'0')}`;};
+
+/* =========================================================================
+   1. 음향 분석 (v0.3과 같은 방식)
+   ========================================================================= */
+let frames=[];
+function pushFrame(f){frames.push(f);if(frames.length>12000)frames.splice(0,frames.length-10000);}
+function framesIn(t0,t1){const o=[];for(let i=frames.length-1;i>=0;i--){const f=frames[i];if(f.t<t0)break;if(f.t<=t1)o.push(f);}return o.reverse();}
+// 음량 자동 보정: 바닥 = 최근 8초 하위 10%, 천장 = 최근 30초 말소리 상위 5%
+const lv={floor:-60,peak:-30,hist:new Float32Array(480),hi:0,hn:0,voiced:new Float32Array(1800),vi:0,vn:0,tick:0,db:-90};
+function updateLevels(db){
+  lv.db=db;lv.hist[lv.hi]=db;lv.hi=(lv.hi+1)%lv.hist.length;lv.hn=Math.min(lv.hn+1,lv.hist.length);
+  if(db>lv.floor+8){lv.voiced[lv.vi]=db;lv.vi=(lv.vi+1)%lv.voiced.length;lv.vn=Math.min(lv.vn+1,lv.voiced.length);}
+  if(++lv.tick%10===0){
+    const h=Array.from(lv.hist.subarray(0,lv.hn)).sort((a,b)=>a-b);if(h.length>20)lv.floor=h[Math.floor(h.length*.1)];
+    if(lv.vn>45){const v=Array.from(lv.voiced.subarray(0,lv.vn)).sort((a,b)=>a-b);lv.peak=v[Math.floor(v.length*.95)];}
+    else lv.peak=Math.max(lv.peak,lv.floor+28);
+    lv.peak=Math.max(lv.peak,lv.floor+14);
+  }
+}
+const volOf=db=>{const lo=Math.max(lv.floor+5,lv.peak-26),range=Math.max(9,lv.peak-lo);return clamp((db-lo)/range,0,1);};
+function detectPitch(b,sr){
+  const n=b.length>>1,d=new Float32Array(n);for(let i=0;i<n;i++)d[i]=(b[2*i]+b[2*i+1])*.5;
+  const s2=sr/2,minL=Math.floor(s2/500),maxL=Math.min(n-1,Math.floor(s2/70));
+  let e=0;for(let i=0;i<n;i++)e+=d[i]*d[i];if(e<1e-6)return 0;
+  const r=new Float32Array(maxL+2);let best=0;
+  for(let L=minL;L<=maxL;L++){let s=0;for(let i=0;i<n-L;i++)s+=d[i]*d[i+L];r[L]=s/e;if(r[L]>best)best=r[L];}
+  if(best<.45)return 0;
+  for(let L=minL+1;L<maxL;L++)if(r[L]>=best*.88&&r[L]>=r[L-1]&&r[L]>=r[L+1]){const a=r[L-1],c=r[L+1],p=(a-c)/(2*(a-2*r[L]+c)||1);return s2/(L+(isFinite(p)?p:0));}
+  return 0;
+}
+function statsOf(t0,t1){
+  const fr=framesIn(t0,t1),vo=fr.filter(f=>f.v>.04),vs=vo.map(f=>f.v).sort((a,b)=>a-b);
+  const vol=vs.length?vs[Math.min(vs.length-1,Math.floor(vs.length*.75))]:.05;
+  const hs=vo.filter(f=>f.hz>0).map(f=>f.hz).sort((a,b)=>a-b);
+  return{vol,hz:hs.length?hs[hs.length>>1]:0};
+}
+let lastHz=170;
+function wordAt(w,a,b,sp){
+  const st=statsOf(a,b),hz=st.hz||lastHz;if(st.hz)lastHz=st.hz;
+  const chars=Array.from(w).filter(ch=>/[\p{L}\p{N}]/u.test(ch)),sy=chars.length?chars:[w];
+  const syl=sy.map((ch,k)=>{const t0=a+(b-a)*k/sy.length,t1=a+(b-a)*(k+1)/sy.length,s=statsOf(t0,t1);return{ch,t0,t1,vol:s.vol,hz:s.hz||hz};});
+  return{t:w,sp,a,b,vol:st.vol,hz,syl};
+}
+
+/* ---------- 마이크 ---------- */
+let ac=null,an=null,tbuf=null,proc=null,pcm=[];
+async function startMic(){
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  if(ac.state==='suspended'){$('gate').hidden=false;await new Promise(r=>$('gate').addEventListener('click',r,{once:true}));$('gate').hidden=true;await ac.resume();}
+  const src=ac.createMediaStreamSource(stream);an=ac.createAnalyser();an.fftSize=2048;src.connect(an);tbuf=new Float32Array(an.fftSize);
+  // Whisper로 보낼 16kHz 원음 (최근 60초)
+  proc=ac.createScriptProcessor(4096,1,1);const ratio=ac.sampleRate/16000;
+  proc.onaudioprocess=e=>{const x=e.inputBuffer.getChannelData(0),n=Math.floor(x.length/ratio),out=new Float32Array(n);
+    for(let i=0;i<n;i++){const a=Math.floor(i*ratio),b=Math.max(a+1,Math.floor((i+1)*ratio));let s=0;for(let k=a;k<b;k++)s+=x[k];out[i]=s/(b-a);}
+    pcm.push({t:now()-x.length/ac.sampleRate,d:out});while(pcm.length&&pcm[0].t<now()-60)pcm.shift();};
+  src.connect(proc);proc.connect(ac.destination);
+}
+function audioStep(){
+  if(!an)return;an.getFloatTimeDomainData(tbuf);let s=0;for(const x of tbuf)s+=x*x;
+  const db=20*Math.log10(Math.sqrt(s/tbuf.length)+1e-9);updateLevels(db);
+  const v=volOf(db),f={t:now(),v,hz:v>.05?detectPitch(tbuf,ac.sampleRate):0};
+  onFrame(f);if(ws&&ws.readyState===1)vadStep(f);
+}
+function pcmBetween(t0,t1){
+  const parts=[];let total=0;
+  for(const c of pcm){const ct1=c.t+c.d.length/16000;if(ct1<t0||c.t>t1)continue;const a=Math.max(0,Math.floor((t0-c.t)*16000)),b=Math.min(c.d.length,Math.ceil((t1-c.t)*16000));if(b>a){parts.push(c.d.subarray(a,b));total+=b-a;}}
+  const i16=new Int16Array(total);let o=0;for(const p of parts)for(let k=0;k<p.length;k++)i16[o++]=clamp(p[k],-1,1)*32767;
+  const u8=new Uint8Array(i16.buffer);let bin='';for(let k=0;k<u8.length;k+=0x8000)bin+=String.fromCharCode.apply(null,u8.subarray(k,k+0x8000));return btoa(bin);
+}
+
+/* =========================================================================
+   2. 로컬 Whisper 연결 (끊기면 계속 다시 연결)
+   ========================================================================= */
+let ws=null,wsInfo='';const utts={};let partialBusy=false;
+const vad={on:false,t0:0,lastVoice:0,run:0,id:0,lastPartial:0,lastClose:0};
+const awaiting=()=>Object.values(utts).some(u=>u.closed&&!u.done&&now()-u.sent<20);
+function wsConnect(){
+  if(CFG.demo)return;
+  const url=location.protocol.startsWith('http')?`ws://${location.host}/ws`:'ws://localhost:8765/ws';
+  let s;try{s=new WebSocket(url);}catch(_){setTimeout(wsConnect,3000);return;}
+  setStatus(false,'인식 프로그램 연결 중…');
+  s.onopen=()=>{ws=s;partialBusy=false;};
+  s.onclose=()=>{if(ws===s)ws=null;setStatus(false,'인식 프로그램 연결 끊김 · 다시 연결 중');setTimeout(wsConnect,2500);};
+  s.onmessage=ev=>{let m;try{m=JSON.parse(ev.data);}catch(_){return;}
+    if(m.type==='hello'){wsInfo=`${m.engine} · ${String(m.model).split('/').pop()}`;setStatus(true,`Whisper 오프라인 인식 · ${wsInfo}`);return;}
+    const u=utts[m.id];
+    if(m.type==='partial'){partialBusy=false;if(u&&!u.done&&m.text&&(m.id===vad.id||!vad.on))setPartial(m.text);return;}
+    if(m.type==='final'&&u){u.done=true;
+      const list=m.words&&m.words.length?m.words.map(w=>({w:w.w,a:u.t0+w.start,b:u.t0+w.end})):(m.text?[{w:m.text,a:u.t0,b:u.t1}]:[]);
+      if(list.length)onWords(list,u.sp);if(!vad.on)setPartial('');}
+  };
+}
+function vadStep(f){
+  const voiced=f.v>.08;if(voiced){vad.run++;vad.lastVoice=f.t;}else vad.run=0;
+  if(!vad.on&&vad.run>=4){vad.on=true;vad.id++;vad.t0=Math.max(f.t-.35,vad.lastClose||0);vad.lastPartial=f.t;utts[vad.id]={t0:vad.t0,sp:speaker,closed:false,done:false};}
+  if(vad.on){const long=f.t-vad.t0>14;
+    if(f.t-vad.lastVoice>.7||long)closeUtt(long?f.t:Math.min(f.t,vad.lastVoice+.3));
+    else if(f.t-vad.lastPartial>1&&!partialBusy){vad.lastPartial=f.t;sendUtt(vad.id,vad.t0,f.t,true);}}
+}
+function closeUtt(t1){if(!vad.on)return;vad.on=false;vad.lastClose=t1;const u=utts[vad.id];u.t1=t1;u.closed=true;u.sent=now();if(t1-u.t0<.3){u.done=true;return;}sendUtt(vad.id,u.t0,t1,false);}
+function sendUtt(id,t0,t1,partial){if(!ws||ws.readyState!==1)return;if(partial)partialBusy=true;ws.send(JSON.stringify({type:'utt',id,partial,lang:CFG.lang,pcm:pcmBetween(t0,t1)}));}
+function setStatus(ok,txt){$('sDot').classList.toggle('ok',ok);$('sTxt').textContent=txt;}
+
+/* =========================================================================
+   3. 나선 좌표
+   ========================================================================= */
+const TURN=8,R=330,TURN_H=240,SEMI=5,ARC=2*Math.PI*R/TURN;
+const ang=t=>Math.PI/2+.85-t/TURN*2*Math.PI;
+const base=t=>-t/TURN*TURN_H;
+const pitchY=hz=>12*Math.log2(hz/170)*SEMI;
+const P=(t,r,y)=>{const a=ang(t);return[r*Math.cos(a),y,r*Math.sin(a)];};
+
+const gc=document.createElement('canvas');gc.width=gc.height=220;const gx=gc.getContext('2d',{willReadFrequently:true});const gCache=new Map();
+function glyphLines(ch,wt,lines,vertical){ // 글자를 래스터로 그린 뒤 한 줄씩 훑어 선분으로
+  const key=ch+wt+lines+vertical;if(gCache.has(key))return gCache.get(key);
+  gx.clearRect(0,0,220,220);gx.fillStyle='#000';gx.textAlign='center';gx.textBaseline='middle';gx.font=`${wt} 170px ${SANS}`;gx.fillText(ch,110,118);
+  const d=gx.getImageData(0,0,220,220).data,on=(x,y)=>d[(y*220+x)*4+3]>110;
+  let x0=220,y0=220,x1=0,y1=0;for(let y=0;y<220;y++)for(let x=0;x<220;x++)if(on(x,y)){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+  const segs=[];if(x1<=x0){const r={segs,aspect:1};gCache.set(key,r);return r;}
+  const bw=x1-x0+1,bh=y1-y0+1;
+  if(!vertical){for(let r=0;r<lines;r++){const y=Math.round(y0+(r+.5)/lines*bh);let s=-1;for(let x=x0;x<=x1+1;x++){const v=x<=x1&&on(x,y);if(v&&s<0)s=x;if(!v&&s>=0){segs.push([(s-x0)/bw-.5,.5-(y-y0)/bh,(x-x0)/bw-.5,.5-(y-y0)/bh]);s=-1;}}}}
+  else{for(let c=0;c<lines;c++){const x=Math.round(x0+(c+.5)/lines*bw);let s=-1;for(let y=y0;y<=y1+1;y++){const v=y<=y1&&on(x,y);if(v&&s<0)s=y;if(!v&&s>=0){segs.push([(x-x0)/bw-.5,.5-(s-y0)/bh,(x-x0)/bw-.5,.5-(y-y0)/bh]);s=-1;}}}}
+  if(gCache.size>4000)gCache.clear();const r={segs,aspect:bw/bh};gCache.set(key,r);return r;
+}
+
+/* =========================================================================
+   4. THREE 장면
+   ========================================================================= */
+let renderer,scene,camera,fog,scaf,sessG,glyphG,dataG,cursorG;
+const mats=new Set(),sprites=new Set();
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function mat(op,dashed){const m=dashed?new THREE.LineDashedMaterial({color:0xffffff,transparent:true,opacity:op,dashSize:dashed[0],gapSize:dashed[1],depthWrite:false})
+  :new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:op,depthWrite:false});m.userData.op=op;styleMat(m);mats.add(m);return m;}
+function styleMat(m){if(!renderer)return;m.color.set(css('--fg'));m.blending=document.documentElement.classList.contains('inv')?THREE.NormalBlending:THREE.AdditiveBlending;m.needsUpdate=true;}
+function geo(arr){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));return g;}
+function segObj(arr,m){const o=new THREE.LineSegments(geo(arr),m);if(m.isLineDashedMaterial)o.computeLineDistances();return o;}
+function lineObj(arr,m){const o=new THREE.Line(geo(arr),m);if(m.isLineDashedMaterial)o.computeLineDistances();return o;}
+function preLine(n,m,seg){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(n*3),3));g.setDrawRange(0,0);const o=seg?new THREE.LineSegments(g,m):new THREE.Line(g,m);o.frustumCulled=false;return o;}
+function label(lines,opt={}){
+  const c=document.createElement('canvas'),x=c.getContext('2d'),px=opt.px||20,PAD=6;
+  const spr=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthWrite:false,opacity:opt.op??1}));spr.center.set(opt.ax??0,opt.ay??.5);
+  spr.userData.lines=lines;
+  spr.userData.draw=()=>{const L=spr.userData.lines;
+    const fonts=L.map((l,i)=>i===0&&opt.head?`700 ${px*1.25}px ${SANS}`:`400 ${px}px ${MONO}`);let w=1;
+    fonts.forEach((f,i)=>{x.font=f;w=Math.max(w,x.measureText(L[i]).width);});
+    const lh=L.map((l,i)=>i===0&&opt.head?px*1.5:px*1.3),h=lh.reduce((a,b)=>a+b,0);
+    c.width=Math.ceil(w+PAD*2);c.height=Math.ceil(h+PAD*2);x.fillStyle=css('--fg');x.textBaseline='top';let y=PAD;
+    L.forEach((l,i)=>{x.font=fonts[i];x.globalAlpha=i===0?1:.72;x.fillText(l,PAD,y);y+=lh[i];});
+    if(spr.material.map)spr.material.map.dispose();const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;spr.material.map=tex;spr.material.needsUpdate=true;
+    const k=opt.scale||.24;spr.scale.set(c.width*k,c.height*k,1);};
+  spr.userData.draw();sprites.add(spr);return spr;
+}
+function disposeTree(g){
+  g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose();mats.delete(o.material);}if(o.isSprite)sprites.delete(o);});
+  while(g.children.length)g.remove(g.children[0]);
+}
+function applyTheme(){
+  const bg=new THREE.Color(css('--bg'));renderer.setClearColor(bg,1);fog.color.copy(bg);
+  mats.forEach(styleMat);sprites.forEach(s=>s.userData.draw());
+}
+
+/* ---------- 고정 비계: 중심축, 바닥 극좌표 격자 ---------- */
+let axisObj,floorG;
+function buildScaffold(){
+  scaf=new THREE.Group();scene.add(scaf);
+  axisObj=preLine(2,mat(.4),false);axisObj.geometry.setDrawRange(0,2);scaf.add(axisObj);
+  floorG=new THREE.Group();scaf.add(floorG);
+  const arr=[];for(let r=120;r<=600;r+=120){for(let k=0;k<128;k++){const a0=k/128*2*Math.PI,a1=(k+1)/128*2*Math.PI;arr.push(r*Math.cos(a0),0,r*Math.sin(a0),r*Math.cos(a1),0,r*Math.sin(a1));}
+    const l=label([`r ${r}`],{px:18,scale:.23,op:.55});l.position.set(r+4,6,0);floorG.add(l);}
+  for(let d=0;d<360;d+=30){const a=d*Math.PI/180;arr.push(0,0,0,600*Math.cos(a),0,600*Math.sin(a));const l=label([`${d}°`],{px:18,scale:.23,ax:.5,op:.55});l.position.set(640*Math.cos(a),0,640*Math.sin(a));floorG.add(l);}
+  floorG.add(segObj(arr,mat(.1)));
+}
+
+/* =========================================================================
+   5. 세션: 첫 목소리에서 시작 → 말이 멈추면 저장 후 대기
+   ========================================================================= */
+let speaker='A',sessCount=0;try{sessCount=+localStorage.getItem('mereh.helix.count')||0;}catch(_){}
+let S={state:'idle',t0:0,dur:0,words:[],lastEnd:null,i:0};
+let envLine,railLine,tickSegs,reveals=[],fades=[],tickLabelT=0,turnLabelK=0,partialSpr=null,partialText='';
+let vrun=0;
+
+function onFrame(f){
+  pushFrame(f);
+  if(f.v>.08){if(++vrun>=4){S.lastVoice=f.t;if(S.state==='idle')startSession(f.t-.45);}}else vrun=0;
+}
+function startSession(t0){
+  disposeTree(sessG);reveals=[];fades=[];tickLabelT=0;turnLabelK=0;partialSpr=null;
+  sessCount++;try{localStorage.setItem('mereh.helix.count',String(sessCount));}catch(_){}
+  S={state:'active',t0,dur:0,words:[],lastEnd:null,i:0,lastVoice:now(),wall:Date.now(),snap:true};
+  glyphG=new THREE.Group();dataG=new THREE.Group();sessG.add(glyphG,dataG);dataG.visible=CFG.data;
+  const M=CFG.maxSess+2;
+  envLine=preLine(M*60,mat(.7),false);envLine.userData.n=0;envLine.userData.last=t0;dataG.add(envLine);  // 진폭 고리선
+  { // 레일(점선)과 0.5초 눈금: 미리 만들어 두고 시간에 맞춰 드러냄
+    const rail=[],tick=[];for(let t=0;t<=M;t+=.05)rail.push(...P(t,R-26,base(t)-86));
+    for(let t=0;t<=M;t+=.5){const major=Math.abs(t-Math.round(t))<1e-6,b=base(t)-86;tick.push(...P(t,R-26,b-(major?10:5)),...P(t,R-26,b));}
+    railLine=lineObj(rail,mat(.22,[3,5]));railLine.frustumCulled=false;railLine.geometry.setDrawRange(0,0);dataG.add(railLine);
+    tickSegs=segObj(tick,mat(.45));tickSegs.frustumCulled=false;tickSegs.geometry.setDrawRange(0,0);dataG.add(tickSegs);
+  }
+  { // 음높이 자 (세션 시작점 옆)
+    const t=-.35,arr=[],b=base(0);arr.push(...P(t,R+60,b+pitchY(320)),...P(t,R+60,b+pitchY(95)));
+    [100,125,150,170,200,250,300].forEach(hz=>{const y=b+pitchY(hz);arr.push(...P(t,R+60,y),...P(t,R+72,y));const l=label([`${hz} Hz`],{px:19,scale:.23,op:hz===170?1:.7});l.position.set(...P(t,R+78,y));dataG.add(l);});
+    dataG.add(segObj(arr,mat(.55)));
+  }
+  cursorG.visible=true;$('prompt').classList.add('off');
+}
+function sessT(abs){return abs-S.t0;}
+function addSilence(ta,tb){
+  const pts=[];for(let t=ta;t<=tb;t+=.05)pts.push(...P(t,R,base(t)));if(pts.length<6)return;
+  dataG.add(lineObj(pts,mat(.5,[4,6])));const tm=(ta+tb)/2,l=label([`침묵 ${(tb-ta).toFixed(1)}″`],{px:20,scale:.24,ax:.5,op:.75});l.position.set(...P(tm,R+8,base(tm)+16));dataG.add(l);
+}
+function onWords(list,sp){
+  if(S.state==='ending')return;
+  if(S.state!=='active')startSession(list[0].a-.3);
+  const born=now(),pts=[],cross=[];
+  list.forEach(item=>{
+    const w=wordAt(item.w.replace(/^[.,!?…·"'“”‘’]+|[.,!?…·"'“”‘’]+$/g,'')||item.w,item.a,Math.max(item.b,item.a+.08),sp);
+    const ta=sessT(w.a),tb=sessT(w.b);
+    if(S.lastEnd!=null&&ta-S.lastEnd>.6)addSilence(S.lastEnd,ta);
+    const layers=w.vol<.2?1:1+Math.round(w.vol*5),wt=w.vol<.2?200:w.vol<.45?400:w.vol<.7?700:900;let top=-1e9;
+    for(let k=0;k<layers;k++){const arr=[];
+      w.syl.forEach(s=>{
+        const g=glyphLines(s.ch,wt,w.vol<.2?7:Math.round(10+s.vol*34),sp==='B');
+        const tc=sessT((s.t0+s.t1)/2),a=ang(tc),slot=(s.t1-s.t0)*ARC,h=22+Math.pow(s.vol,1.1)*125,gw=Math.min(h*g.aspect,slot*.94);
+        const cy=base(tc)+pitchY(s.hz),cr=R+k*4.2,cx=cr*Math.cos(a),cz=cr*Math.sin(a),ux=Math.sin(a),uz=-Math.cos(a);top=Math.max(top,cy+h/2);
+        g.segs.forEach(q=>arr.push(cx+ux*q[0]*gw,cy+q[1]*h,cz+uz*q[0]*gw,cx+ux*q[2]*gw,cy+q[3]*h,cz+uz*q[2]*gw));
+        if(k===0){const p=P(tc,R+30,cy);pts.push(...p);const ex=Math.sin(a)*3,ez=-Math.cos(a)*3;cross.push(p[0]-ex,p[1],p[2]-ez,p[0]+ex,p[1],p[2]+ez,p[0],p[1]-3,p[2],p[0],p[1]+3,p[2]);}
+      });
+      if(!arr.length)continue;
+      const o=segObj(arr,mat(k===0?(w.vol<.2?.62:1):.12+.5*(1-k/layers)));o.geometry.setDrawRange(0,0);glyphG.add(o);reveals.push({o,n:arr.length/3,born,delay:k*.07});
+    }
+    // 단어 주석
+    const tc=(ta+tb)/2,a=ang(tc),i=S.i++,r0=R+layers*4.2+2,r1=R+(i%2?150:110),y0=top,y1=top+(i%2?46:28);
+    const leader=segObj([r0*Math.cos(a),y0,r0*Math.sin(a),r1*Math.cos(a),y1,r1*Math.sin(a)],mat(.35));leader.visible=false;dataG.add(leader);
+    const l=label([w.t,`${dB(w.vol)} dB · ${Math.round(w.hz)} Hz`,`t ${ta.toFixed(2)}–${tb.toFixed(2)}`],{head:true,px:19,scale:.26,ay:0});
+    l.position.set(r1*Math.cos(a),y1,r1*Math.sin(a));l.material.opacity=0;dataG.add(l);fades.push({spr:l,leader,born});
+    S.lastEnd=tb;S.words.push({t:w.t,sp,t0:+ta.toFixed(3),t1:+tb.toFixed(3),vol:+w.vol.toFixed(3),hz:Math.round(w.hz),
+      syl:w.syl.map(s=>({ch:s.ch,t0:+sessT(s.t0).toFixed(3),t1:+sessT(s.t1).toFixed(3),vol:+s.vol.toFixed(3),hz:Math.round(s.hz)}))});
+    $('rW').textContent=w.t;$('rV').textContent=`화자 ${sp} · ${dB(w.vol)} dB · ${Math.round(w.hz)} Hz · 겹 ${layers}`;
+  });
+  if(pts.length>3)dataG.add(lineObj(pts,mat(.55)));
+  if(cross.length)dataG.add(segObj(cross,mat(.6)));
+}
+function setPartial(text){
+  partialText=text||'';
+  if(!partialText){if(partialSpr)partialSpr.visible=false;return;}
+  if(!partialSpr){partialSpr=label([''],{px:22,scale:.3,ax:0,op:.8});cursorG.add(partialSpr);}
+  partialSpr.userData.lines=['… '+partialText];partialSpr.userData.draw();partialSpr.visible=true;
+}
+
+/* ---------- 세션 끝: 전체가 보이게 찍어서 저장 ---------- */
+function endSession(){
+  if(S.state!=='active')return;S.state='ending';
+  if(!S.words.length){disposeTree(sessG);S={state:'idle',t0:0,dur:0,words:[],lastEnd:null,i:0};cursorG.visible=false;$('prompt').classList.remove('off');return;}
+  S.dur=Math.max(1,S.lastEnd);
+  reveals.forEach(r=>r.o.geometry.setDrawRange(0,r.n));reveals=[];
+  fades.forEach(f=>{f.spr.material.opacity=1;f.leader.visible=true;});fades=[];
+  cursorG.visible=false;setPartial('');
+  const H=S.dur/TURN*TURN_H+460,fit=Math.max(2150,H/2/Math.tan(16*Math.PI/180)*1.08);
+  // 가장 크게 말한 단어가 정면에 오도록
+  const loud=S.words.reduce((a,b)=>b.vol>a.vol?b:a,S.words[0]);
+  Object.assign(goal,{theta:Math.PI/2-ang((loud.t0+loud.t1)/2),phi:1.27,dist:fit,ty:base(S.dur/2)-40});Object.assign(cam,goal);
+  floorG.position.y=base(S.dur)-320;applyCam(true);renderer.render(scene,camera);
+  const d=new Date(S.wall);
+  // 화면 그림 + 판권 글씨를 한 장으로
+  const W=renderer.domElement.width,Hh=renderer.domElement.height,k=W/1920,cc=document.createElement('canvas');cc.width=W;cc.height=Hh;
+  const x=cc.getContext('2d');x.drawImage(renderer.domElement,0,0);x.fillStyle=css('--fg');x.textBaseline='alphabetic';
+  x.font=`500 ${14*k}px ${MONO}`;x.globalAlpha=.6;x.fillText('목소리 나선 · VOICE HELIX',56*k,Hh-118*k);
+  x.globalAlpha=1;x.font=`800 ${52*k}px ${SANS}`;x.fillText('미래 me-Reh',56*k,Hh-62*k);
+  x.globalAlpha=.65;x.font=`400 ${16*k}px ${MONO}`;
+  x.fillText(`세션 ${String(sessCount).padStart(3,'0')} · ${d.toLocaleDateString('ko-KR')} ${d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} · ${S.words.length}단어 · ${fmt(S.dur)}`,56*k,Hh-30*k);
+  x.textAlign='right';x.fillText(`가장 큰 소리: ${loud.t} · ${dB(loud.vol)} dB · ${loud.hz} Hz`,W-56*k,Hh-30*k);
+  const png=cc.toDataURL('image/png');
+  const stamp=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}${String(d.getSeconds()).padStart(2,'0')}`;
+  const json={schema:'me-Reh-helix-v0.4',session:sessCount,started:d.toISOString(),duration:+S.dur.toFixed(2),lang:CFG.lang,words:S.words};
+  if(location.protocol.startsWith('http'))
+    fetch('archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:`${stamp}_session${String(sessCount).padStart(3,'0')}`,png,json})})
+      .then(r=>r.json()).then(m=>{window.__lastArchive=m;setStatus(!!ws,`저장됨 · ${m.saved||''}`);setTimeout(()=>setStatus(!!ws||CFG.demo,ws?`Whisper 오프라인 인식 · ${wsInfo}`:CFG.demo?'데모 모드':'인식 프로그램 연결 중…'),6000);})
+      .catch(()=>setStatus(false,'세션 저장 실패 · 인식 프로그램 창을 확인해 주세요'));
+  window.__lastSession=json;
+  S.state='idle';$('prompt').classList.remove('off');
+}
+
+/* =========================================================================
+   6. 데모: 마이크 없이 예시 대사를 같은 경로로 흘려보냄
+   ========================================================================= */
+const SCRIPT=[
+ ['A','어제',.35,205,.3],['A','회의',.4,212,.32],['A','끝나고',.38,200,.4],['A','분명히',.78,262,.55],['A','얘기했는데',.45,190,.7],['-',.9],
+ ['B','저는',.3,128,.28],['B','그런',.42,138,.3],['B','말',.55,150,.22],['B','못',.6,155,.2],['B','들었어요',.36,122,.6],['-',.6],
+ ['A','그건',.22,172,.42],['A','정말',.52,214,.46],['A','아니라고',.95,290,.78],['A','했잖아요',.16,148,.74],['-',2.4],
+ ['B','아…',.08,110,.6],['B','그랬구나',.12,115,.8],['-',1.6],
+ ['B','미안해요',.28,125,.6],['B','제가',.2,120,.3],['B','놓쳤나',.24,128,.4],['B','봐요',.14,112,.4],['-',.7],
+ ['A','아니에요',.4,196,.5],['A','다시',.5,215,.32],['A','맞춰',.42,205,.32],['A','보면',.36,198,.3],['A','돼요',.3,185,.35],['-',.5],
+ ['B','그럼',.45,140,.3],['B','지금',.58,152,.3],['B','같이',.66,165,.32],['B','정리해요',.55,148,.6],['-',.4],
+ ['A','좋아요',.62,235,.42],['A','처음부터',.4,200,.55],['A','천천히',.18,170,.75],['-',1.0],
+ ['B','고마워요',.48,160,.55],['B','정말로',.7,178,.6],['-',.8],
+ ['A','우리',.55,225,.3],['A','다시',.72,250,.32],['A','시작해요',.98,305,.8],
+];
+let demo=null;
+function demoInit(){
+  const U=[];let u=[];SCRIPT.forEach(s=>{if(s[0]==='-'){if(u.length){U.push({w:u,pause:s[1]});u=[];}}else u.push(s);});if(u.length)U.push({w:u,pause:1});
+  const segs=[],ev=[];let t=1.2;
+  U.forEach(x=>{const ws=[],said=[];
+    x.w.forEach(w=>{segs.push({a:t,b:t+w[4],vol:w[2],hz:w[3],rise:w[2]>.6?1:-1});ws.push({w:w[1],a:t,b:t+w[4]});said.push(w[1]);t+=w[4];ev.push({t:t+.6,type:'partial',text:said.join(' ')});t+=.05;});
+    ev.push({t:t+.9,type:'final',words:ws.slice(),sp:x.w[0][0]});t+=Math.max(.45,x.pause);});
+  demo={D0:now(),segs,ev:ev.sort((a,b)=>a.t-b.t),end:t,len:t+CFG.idle+6,ei:0,si:0,gen:0};
+}
+function demoStep(){
+  if(!demo)demoInit();
+  let t=now()-demo.D0;
+  if(t>demo.len){if(!CFG.loop)return;demo.D0=now();demo.ei=demo.si=0;demo.gen=0;t=0;}
+  while(demo.gen<t){const g=demo.gen;demo.gen+=1/60;
+    while(demo.si<demo.segs.length&&demo.segs[demo.si].b<g)demo.si++;const s=demo.segs[demo.si];let v=0,hz=0;
+    if(s&&g>=s.a){const u=(g-s.a)/(s.b-s.a),e=Math.pow(Math.sin(Math.PI*Math.min(1,u*1.04)),.5);v=clamp(s.vol*(.45+.7*e)*(.88+.24*Math.random()),0,1);hz=v>.06?s.hz*(1+(u-.5)*.12*s.rise)+(Math.random()-.5)*6:0;}
+    lv.db=-60+v*34;onFrame({t:demo.D0+g,v,hz});}
+  while(demo.ei<demo.ev.length&&demo.ev[demo.ei].t<=t){const e=demo.ev[demo.ei++];
+    if(e.type==='partial')setPartial(e.text);else{speaker=e.sp;onWords(e.words.map(w=>({w:w.w,a:demo.D0+w.a,b:demo.D0+w.b})),e.sp);setPartial('');}}
+}
+
+/* =========================================================================
+   7. 카메라와 매 프레임 갱신
+   ========================================================================= */
+const cam={theta:.35,phi:1.25,dist:2200,ty:0},goal={...cam};
+function fitDist(d){const a=innerWidth/innerHeight;return d*(a<1?Math.min(2.2,1.1/a):1);}
+function applyCam(snap){
+  if(!snap)for(const k of ['theta','phi','dist','ty'])cam[k]+=(goal[k]-cam[k])*.05;
+  const s=Math.sin(cam.phi);camera.position.set(cam.dist*s*Math.sin(cam.theta),cam.ty+cam.dist*Math.cos(cam.phi),cam.dist*s*Math.cos(cam.theta));
+  camera.lookAt(0,cam.ty,0);fog.near=cam.dist*.7;fog.far=cam.dist*(S.state==='active'?1.6:2.2);
+}
+let lastTs=0,hudT=0;
+function frame(ts){
+  const dt=Math.min(.05,(ts-(lastTs||ts))/1000);lastTs=ts;
+  if(CFG.demo)demoStep();else audioStep();
+  const tn=now();
+  if(S.state==='active'){
+    const nt=sessT(tn);S.dur=nt;
+    // 진폭 고리선: 새 프레임만 이어 붙임
+    const pos=envLine.geometry.attributes.position;let n=envLine.userData.n;
+    for(const f of framesIn(envLine.userData.last+1e-6,tn)){if(n>=pos.count)break;const t=sessT(f.t);if(t<0)continue;const p=P(t,R-26,base(t)-86+f.v*52);pos.setXYZ(n++,p[0],p[1],p[2]);envLine.userData.last=f.t;}
+    envLine.userData.n=n;pos.needsUpdate=true;envLine.geometry.setDrawRange(0,n);
+    railLine.geometry.setDrawRange(0,Math.floor(nt/.05)+1);tickSegs.geometry.setDrawRange(0,2*(Math.floor(nt/.5)+1));
+    while(tickLabelT<=nt){if(tickLabelT>0){const l=label([`${String(tickLabelT).padStart(2,'0')} s`],{px:20,scale:.24,ax:.5,op:.7});l.position.set(...P(tickLabelT,R-26,base(tickLabelT)-108));dataG.add(l);}tickLabelT+=2;}
+    while(turnLabelK*TURN<=nt){const t=turnLabelK*TURN,y=base(t);const l=label([`${fmt(t).slice(0,5)}–${fmt(t+TURN).slice(0,5)}`],{px:20,scale:.25,op:.75});l.position.set(12,y-14,0);dataG.add(l);
+      dataG.add(segObj([0,y,0,...P(t,R-40,y)],mat(.16,[2,6])));turnLabelK++;}
+    // 커서
+    const a=ang(nt),y=base(nt),c=cursorG.children;
+    c[0].geometry.attributes.position.array.set([0,y,0,(R+200)*Math.cos(a),y,(R+200)*Math.sin(a)]);c[0].geometry.attributes.position.needsUpdate=true;
+    c[1].geometry.attributes.position.array.set([R*Math.cos(a),y-110,R*Math.sin(a),R*Math.cos(a),y+120,R*Math.sin(a)]);c[1].geometry.attributes.position.needsUpdate=true;c[1].computeLineDistances();
+    if(partialSpr)partialSpr.position.set((R+210)*Math.cos(a),y+10,(R+210)*Math.sin(a));
+    // 카메라: 지금 쓰이는 자리가 늘 앞을 보도록 나선을 따라 돎
+    // 카메라는 방금 새겨진 단어를 정면에 둠. 말이 멈춘 동안에는 그 자리에 머물고, 새 단어가 새겨지면 따라감
+    const focus=S.lastEnd!=null?S.lastEnd-.4:nt-.8;
+    goal.theta=Math.PI/2-ang(focus);goal.phi=1.32;goal.dist=fitDist(1650);goal.ty=base(focus)+120;
+    floorG.position.y=y-320;
+    if(S.snap){Object.assign(cam,goal);S.snap=false;}  // 세션 시작 때는 바로 그 자리로
+    if(tn-S.lastVoice>CFG.idle&&!awaiting()&&!vad.on)endSession();
+    else if(nt>CFG.maxSess)endSession();
+  }else{
+    goal.theta+=dt*.07;goal.phi=1.25;
+    if(S.dur>0){const H=S.dur/TURN*TURN_H+460;goal.dist=fitDist(Math.max(2150,H/2/Math.tan(16*Math.PI/180)*1.08));goal.ty=base(S.dur/2)-40;floorG.position.y=base(S.dur)-320;}
+    else{goal.dist=fitDist(2050);goal.ty=0;floorG.position.y=-320;}
+  }
+  // 글자가 선으로 그려지는 애니메이션
+  reveals=reveals.filter(r=>{const f=clamp((tn-r.born-r.delay)/.7,0,1);r.o.geometry.setDrawRange(0,2*Math.floor(f*r.n/2));return f<1;});
+  fades=fades.filter(f=>{const k=clamp((tn-f.born-.5)/.5,0,1);f.spr.material.opacity=k;f.leader.visible=k>0;return k<1;});
+  // 중심축
+  const top=(S.state==='idle'&&!S.words.length)?260:220,bot=floorG.position.y;
+  axisObj.geometry.attributes.position.array.set([0,top,0,0,bot,0]);axisObj.geometry.attributes.position.needsUpdate=true;
+  applyCam(false);renderer.render(scene,camera);
+  if(ts-hudT>100){hudT=ts;hud();}
+  requestAnimationFrame(frame);
+}
+function hud(){
+  if(S.state==='active'){$('rT').textContent=fmt(S.dur);$('sess').textContent=`세션 ${String(sessCount).padStart(3,'0')} · 기록 중 · ${S.words.length}단어`;}
+  else{$('rT').textContent='';$('rW').textContent='';$('rV').textContent='';$('sess').textContent=S.words.length?`지난 세션 ${String(sessCount).padStart(3,'0')} · ${S.words.length}단어 · ${fmt(S.dur)}`:'대기 중';}
+  if(!$('help').hidden)$('cal').textContent=`입력 ${Math.round(lv.db)} dB · 소음 ${Math.round(lv.floor)} · 큰 소리 ${Math.round(lv.peak)} · 대기 전환 ${CFG.idle}초 · ${CFG.demo?'데모':wsInfo||'인식 연결 대기'}`;
+}
+
+/* =========================================================================
+   8. 시작
+   ========================================================================= */
+async function boot(){
+  if(!window.THREE){$('pBig').textContent='3D 라이브러리를 찾을 수 없습니다';$('pSmall').textContent='vendor/three.min.js 파일이 이 페이지와 같은 폴더에 있는지 확인해 주세요';return;}
+  if(CFG.invert)document.documentElement.classList.add('inv');
+  renderer=new THREE.WebGLRenderer({canvas:$('gl'),antialias:true,preserveDrawingBuffer:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.setSize(innerWidth,innerHeight,false);
+  camera=new THREE.PerspectiveCamera(32,innerWidth/innerHeight,10,20000);
+  scene=new THREE.Scene();fog=new THREE.Fog(0,1,2);scene.fog=fog;
+  sessG=new THREE.Group();cursorG=new THREE.Group();scene.add(sessG,cursorG);cursorG.visible=false;
+  cursorG.add(preLine(2,mat(.9),true));cursorG.children[0].geometry.setDrawRange(0,2);
+  cursorG.add(preLine(2,mat(.9,[3,4]),true));cursorG.children[1].geometry.setDrawRange(0,2);
+  buildScaffold();mats.forEach(styleMat);applyTheme();
+  addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
+  addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+    if(k==='h'){$('help').hidden=!$('help').hidden;document.body.classList.toggle('cursor',!$('help').hidden);hud();}
+    else if(k==='f'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{});}
+    else if(k==='i'){document.documentElement.classList.toggle('inv');applyTheme();}
+    else if(k==='d'){CFG.data=!CFG.data;if(dataG)dataG.visible=CFG.data;scaf.visible=CFG.data;}
+    else if(k==='1')speaker='A';else if(k==='2')speaker='B';
+    else if(k==='s')endSession();});
+  scaf.visible=CFG.data;
+  if(CFG.demo){setStatus(true,'데모 모드 · 예시 대사');}
+  else{
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('pBig').textContent='이 브라우저에서는 마이크를 쓸 수 없습니다';$('pSmall').textContent='start_installation.command 로 실행해 주세요';}
+    else try{await startMic();wsConnect();}
+    catch(e){$('pBig').textContent='마이크를 열 수 없습니다';$('pSmall').textContent=`마이크 연결과 Chrome의 마이크 허용을 확인해 주세요 (${e.name||e.message})`;}
+  }
+  requestAnimationFrame(frame);
+}
+boot();
+window.__mereh={get S(){return S;},endSession};
+</script>
+</body>
+</html>
